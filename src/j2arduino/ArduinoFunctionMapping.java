@@ -1,20 +1,20 @@
 package j2arduino;
 
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 
 /**
  Represents a mapping between function names that can be called on remote Arduinos and their offsets.
 
- If enabled at the remote device and not overridden by a constant default, a mapping between (the string representation of)
- \link #CMD_P specific functions \endlink and their offset in a function pointer array (located at the device)
- will be read upon connecting to it.
+ If enabled at the remote device and not overridden by a constant default, a mapping between (the string representation of) \link #CMD_P specific
+ functions \endlink and their offset in a function pointer array (located at the device) will be read upon connecting to it.
  */
 public class ArduinoFunctionMapping{
+
 /** The default offset of the remote function (usually "a2jGetMapping"), that provides the information necessary for this class. */
 public final static byte defaultOffset = 0;
-private Hashtable ht;
+private final Hashtable<String, Byte> ht;
 private byte funcOffset;
 
 /**
@@ -39,16 +39,16 @@ protected ArduinoFunctionMapping(Hashtable mapping){
 			throw new IllegalArgumentException("ArduinoFunctionMapping does not allow more than 256 entries!");
 
 		// we could take 'mapping' as our ht but it should not be accessible directly from outside -> copy contents
-		Enumeration keys = mapping.keys();
-		ht = new Hashtable(size);
+		Iterator iterator = mapping.keySet().iterator();
+		ht = new Hashtable<String, Byte>(size);
 		for(int i = 0; i < size; i++){
-			String key = (String)keys.nextElement();
+			String key = (String)iterator.next();
 			Byte val = (Byte)mapping.get(key);
 			ht.put(key, val);
 		}
 		funcOffset = -1;
 	} else{
-		ht = new Hashtable(0);
+		ht = new Hashtable<String, Byte>(0);
 		funcOffset = defaultOffset;
 	}
 }
@@ -78,26 +78,28 @@ public synchronized void fetch(Arduino arduino) throws IOException, InterruptedE
  @param timeout the timeout after which a {@link j2arduino.util.TimeoutException} is thrown
  @throws IOException          if there is a communication problem or the timeout expires
  @throws InterruptedException if the thread is interrupted before a reply is received */
-public synchronized void fetch(Arduino arduino, int timeout) throws IOException, InterruptedException{
+public void fetch(Arduino arduino, int timeout) throws IOException, InterruptedException{
 	if(funcOffset < 0)
 		return;
 	byte[] msg = arduino.sendSyncWait(new ArduinoPacket(funcOffset, null, null), timeout).msg;
-	ht.clear();
-	StringBuffer sb = new StringBuffer();
-	byte idx = (byte)0;
-	for(int i = 0; i < msg.length; i++){
-		switch(msg[i]){
-			case 0:
-				ht.put(sb.toString(), new Byte(idx));
-				idx++;
-				sb.setLength(0);
-				break;
-			default:
-				sb.append((char)msg[i]);
-				break;
+	synchronized(ht){
+		ht.clear();
+		StringBuilder sb = new StringBuilder(64);
+		byte idx = (byte)0;
+		for(byte aMsg : msg){
+			switch(aMsg){
+				case 0:
+					ht.put(sb.toString(), idx);
+					idx++;
+					sb.setLength(0);
+					break;
+				default:
+					sb.append((char)aMsg);
+					break;
+			}
 		}
+		System.err.println("fmap: " + ht);
 	}
-	System.out.println("fmap: " + ht);
 }
 
 /**
@@ -123,16 +125,16 @@ public boolean containsKey(String funcName){
  @param funcName the string representation of the searched function
  @return the offset of that function according to this mapping, or -1 if there exists no mapping */
 public byte get(String funcName){
-	Byte funcNumber = (Byte)ht.get(funcName);
+	Byte funcNumber = ht.get(funcName);
 	if(funcNumber == null){
 		return -1;
 	}
-	return funcNumber.byteValue();
+	return funcNumber;
 }
 
 /** Clears all mappings in this instance. */
-public synchronized void clear(){
-	ht.clear();
+public void clear(){
+	ht.clear(); // Unlike the new collection implementations, Hashtable is synchronized.
 }
 
 }

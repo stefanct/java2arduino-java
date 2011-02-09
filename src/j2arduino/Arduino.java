@@ -4,32 +4,35 @@ import j2arduino.util.*;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
+import javax.usb.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Enumeration;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Hashtable;
-import java.util.Vector;
+import java.util.Iterator;
 
 /**
  Represents one remote ArduinoBT. After {@link #connect() connecting} various methods to send data or "call" methods are available. To listen for
- Bluetooth activity {@link #addActivityListener(ArduinoActivityListener)} provides the option to add {@link ArduinoActivityListener}s. All methods
+ Bluetooth activity {@link #addActivityListener(ArduinoActivityListener)} provides the option to put {@link ArduinoActivityListener}s. All methods
  are thread-safe if not noted otherwise.
 
  @see j2arduino */
 public class Arduino{
 
 /** default timeout when calling sendSync(). 0 will block forever. */
-public static final int PACKET_TIMEOUT = 5000;
+public static final int PACKET_TIMEOUT = 2500000;
 /** Default timeout for a connecting attempt. 0 will block forever. */
-public static final int CONNECTING_TIMEOUT = 3300;
+public static final int CONNECTING_TIMEOUT = 3000000;
 
 /** UPPERCASE string representation of the bluetooth hardware address of associated ArduinoBT. */
 public final String address;
 /** Human readable BT name of the corresponding remote Arduino device. */
 public final String name;
-private final Vector listeners;
-private ConcurrentRingBuffer requests;
+private final UsbInterface usbIf;
+private final Collection<ArduinoActivityListener> listeners;
+private ConcurrentRingBuffer<ArduinoPacket> requests;
 /** Indicates connection state: 0 == disconnected, 1 == connecting, 2 == connected. */
 private byte connected;
 private Thread workerThread;
@@ -41,11 +44,13 @@ private ArduinoProperties props;
  @addtogroup j2asizes java2arduino sizes */
 //@{
 /** Maximum number of bytes to be transmitted as payload in arduino2j packets. */
-private static final int A2J_MAX_PAYLOAD = 255;
+public static final int A2J_MAX_PAYLOAD = 255;
 /** Number of bytes of the a2jMany header. */
 private static final int A2J_MANY_HEADER = 6;
 /** Maximum number of bytes to be transmitted as payload in a2jMany packets. */
 private static final int A2J_MANY_PAYLOAD = A2J_MAX_PAYLOAD - A2J_MANY_HEADER;
+public static final byte USB_IN_EPNUM = (byte)2;
+public static final byte USB_OUT_EPNUM = (byte)(0x80|1);
 //@}
 
 /**
@@ -55,50 +60,68 @@ private static final int A2J_MANY_PAYLOAD = A2J_MAX_PAYLOAD - A2J_MANY_HEADER;
  @param btName    the human readable name of this Arduino. Should match the string returned by RemoteDevice#getFriendlyName for address \a
  btAddress. */
 Arduino(String btAddress, String btName){
+	this(btAddress, btName, null);
+}
+
+public Arduino(String btAddress, String btName, UsbDevice dev){
+	usbIf = dev.getActiveUsbConfiguration().getUsbInterface((byte)0);
 	address = btAddress;
 	name = btName;
-	listeners = new Vector(0, 1);
+	listeners = new ArrayList<ArduinoActivityListener>(0);
 	connected = (byte)0;
 	workerThread = null;
 	funcMapping = null;
 	props = null;
 	worker = null;
-	requests = new ConcurrentRingBuffer(8, "Connection closed");
+	requests = new ConcurrentRingBuffer<ArduinoPacket>(8, "Connection closed");
 }
 
 /** \defgroup arduinoConnection Arduino methods (connection related)*/
 /**
- Creates a new connection to an ArduinoBT.
-
- \ingroup arduinoConnection
-
- @return true if the connection was established due to this call, false otherwise
- @throws IOException          if no connection could be established.
- @throws InterruptedException If the calling thread is interrupted before the connecting attempt succeeded
- @see #connect(Hashtable) */
-public boolean connect() throws IOException, InterruptedException{
-	return connect(null);
-}
-
-/**
- Creates a new connection to an ArduinoBT.
+ Creates a new connection.
 
  Creates a connection including a working thread, function mapping and properties. If a (non-null) Hashtable is provided, it will be used as constant
  function mapping, else the Arduino will be queried for it.
 
  \ingroup arduinoConnection
 
- @param functionMapping a constant function mapping.
+ @param functionMapping a constant function mapping (may be null).
  @return true if the connection was established due to this call, false otherwise
  @throws IOException          if no connection could be established.
  @throws InterruptedException If the calling thread is interrupted before the connecting attempt succeeded */
-public boolean connect(Hashtable functionMapping) throws IOException, InterruptedException{
+public boolean connect(Hashtable functionMapping) throws IOException, InterruptedException, UsbException{
 	synchronized(this){
 		if(connected != 0)
 			return false;
 		fireActivityListeners(ArduinoActivityListener.STATE_ACTIVE);
 		try{
-			worker = new ArduinoWorker(requests, (StreamConnection)Connector.open("btspp://" + address + ":1", Connector.READ_WRITE));
+			if(usbIf != null){
+				if(usbIf == null)
+					throw new UsbException(address + " is not configured");
+				usbIf.claim();
+				UsbEndpoint outEndpoint = usbIf.getUsbEndpoint(USB_IN_EPNUM);
+				UsbPipe outPipe = outEndpoint.getUsbPipe();
+				outPipe.open();
+
+				UsbEndpoint inEndpoint = usbIf.getUsbEndpoint(USB_OUT_EPNUM);
+				UsbPipe inPipe = inEndpoint.getUsbPipe();
+				inPipe.open();
+
+				worker = new ArduinoWorker(requests,
+				                           new BufferedInputStream(new UsbInputStream(inPipe), 300),
+				                           new BufferedOutputStream(new UsbOutputStream(outPipe), 300));
+//				final UsbStreamConnection con = new UsbStreamConnection(inPipe, outPipe);
+//				worker = new ArduinoWorker(requests,
+//				                           new BufferedInputStream(con.openInputStream(), 300),
+//				                           new BufferedOutputStream(con.openOutputStream(), 300));
+			} else{
+				worker = new ArduinoWorker(requests,
+				                           new BufferedInputStream(((StreamConnection)Connector.open("btspp://" + address + ":1",
+				                                                                                     Connector.READ_WRITE)).openInputStream(), 300),
+				                           new BufferedOutputStream(((StreamConnection)Connector.open("btspp://" + address + ":1",
+				                                                                                      Connector.READ_WRITE)).openOutputStream(),
+				                                                    300));
+			}
 		} finally{
 			fireActivityListeners(ArduinoActivityListener.STATE_INACTIVE);
 		}
@@ -107,42 +130,43 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 		funcMapping = new ArduinoFunctionMapping(functionMapping);
 		props = new ArduinoProperties(funcMapping.get("a2jGetPropsOffset"));
 		connected = 1;
+	}
+	int tries = 2;
+	while(true){
+		long startTime = System.currentTimeMillis();
+		IOException e = null;
+		InterruptedException ie = null;
+		try{
+			int freeTime = CONNECTING_TIMEOUT;
+			funcMapping.fetch(this, freeTime);
+			freeTime -= (int)(System.currentTimeMillis() - startTime);
+			props.setFuncOffset(funcMapping.get("a2jGetProperties"));
+			props.fetch(this, freeTime);
+			break;
+		} catch(TimeoutException ex){
+			e = ex;
+		} catch(InterruptedIOException ex){
+			e = ex;
+		} catch(IOException ex){
+			disconnect();
+			throw ex;
+		} catch(InterruptedException ex){
+			ie = ex;
+		}
+		tries--;
+		System.err.println(2-tries+"th try");
 
-		int tries = 2;
-		while(true){
-			long startTime = System.currentTimeMillis();
-			IOException e = null;
-			InterruptedException ie = null;
-			try{
-				int freeTime = CONNECTING_TIMEOUT;
-				funcMapping.fetch(this, freeTime);
-				freeTime -= (int)(System.currentTimeMillis() - startTime);
-				props.setFuncOffset(funcMapping.get("a2jGetProperties"));
-				props.fetch(this, freeTime);
-				break;
-			} catch(TimeoutException ex){
-				e = ex;
-			} catch(InterruptedIOException ex){
-				e = ex;
-			} catch(IOException ex){
-				disconnect();
-				throw ex;
-			} catch(InterruptedException ex){
-				ie = ex;
-			}
-			tries--;
-
-			if(tries <= 0){
-				disconnect();
-				if(e != null){
-					throw e;
-				} else{
-					throw ie;
-				}
+		if(tries <= 0){
+			disconnect();
+			if(e != null){
+				throw e;
+			} else{
+				throw ie;
 			}
 		}
-		connected = 2;
 	}
+	connected = 2;
+
 	fireActivityListeners(ArduinoActivityListener.STATE_CONNECTED);
 	return true;
 }
@@ -155,17 +179,28 @@ public void disconnect(){
 		connected = 0;
 	}
 	if(workerThread != null){
+		worker.shutdown();
 		if(Thread.currentThread() != workerThread){
-			worker.shutdown();
 			workerThread.interrupt();
-			try{
-				workerThread.join();
-				workerThread = null;
-				worker = null;
-			} catch(InterruptedException e){
-				System.err.println("Interrupted while waiting for ArduinoWorker to die!");
-				e.printStackTrace();
+			while(workerThread.isAlive()){
+				try{
+					workerThread.join();
+				} catch(InterruptedException e){
+					System.err.println("Interrupted while waiting for ArduinoWorker to die!");
+					e.printStackTrace();
+				}
 			}
+			workerThread = null;
+			worker = null;
+		}
+	}
+	if(usbIf != null){
+		try{
+			usbIf.getUsbEndpoint(USB_OUT_EPNUM).getUsbPipe().close();
+			usbIf.getUsbEndpoint(USB_IN_EPNUM).getUsbPipe().close();
+			usbIf.release();
+		} catch(UsbException ignored){
+			ignored.printStackTrace();
 		}
 	}
 	funcMapping.clear();
@@ -207,7 +242,7 @@ public ArduinoProperties getProps(){
 
  @param l the element to add. */
 public void addActivityListener(ArduinoActivityListener l){
-	listeners.addElement(l);
+	listeners.add(l);
 }
 
 /**
@@ -215,13 +250,11 @@ public void addActivityListener(ArduinoActivityListener l){
 
  @param l the element to remove. */
 public void removeActivityListener(ArduinoActivityListener l){
-	listeners.removeElement(l);
+	listeners.remove(l);
 }
 
 private void fireActivityListeners(int newState){
-	Enumeration enumeration = listeners.elements();
-	while(enumeration.hasMoreElements()){
-		ArduinoActivityListener listener = (ArduinoActivityListener)enumeration.nextElement();
+	for(ArduinoActivityListener listener : listeners){
 		listener.connectionStateChanged(newState, this);
 	}
 }
@@ -231,9 +264,12 @@ private void fireActivityListeners(int newState){
  Checks for malformed requests.
 
  @param req the ArduinoPacket to be evaluated.
- @throws IllegalArgumentException if the fields of the ArduinoPacket do not represent a valid request. */
-public void verifyRequest(ArduinoPacket req) throws IllegalArgumentException{
-	if(req.cmd < 0 || req.cmd > 255 || ((req.msg != null) && (req.msg.length < 0 || req.msg.length > 255))){
+ @throws IllegalArgumentException if the fields of the ArduinoPacket do not represent a valid request.
+ @throws IllegalStateException    if not connected. */
+public void verifyRequest(ArduinoPacket req) throws IllegalArgumentException, IllegalStateException{
+	if(connected == 0)
+		throw new IllegalStateException();
+	if(req.cmd < 0 || req.cmd > 255 || ((req.msg != null) && (req.msg.length < 0 || req.msg.length > A2J_MAX_PAYLOAD))){
 		req.print();
 		throw new IllegalArgumentException("Malformed ArduinoPacket");
 	}
@@ -284,10 +320,11 @@ public void sendAsyncByName(String funcName, byte[] payload, ArduinoResponseList
  Puts a request into the sendQueue and returns immediately.
 
  @param req is the request to be added to the sendQueue.
- @throws IllegalArgumentException if the packet is malformed. */
-public void sendAsync(ArduinoPacket req){
+ @throws IllegalArgumentException if the packet is malformed.
+ @throws IllegalStateException    if not connected. */
+public void sendAsync(ArduinoPacket req) throws IllegalArgumentException, IllegalStateException{
 	verifyRequest(req);
-	requests.addUninterruptible(req);
+	requests.putUninterruptible(req);
 }
 //@}
 
@@ -302,9 +339,10 @@ public void sendAsync(ArduinoPacket req){
  @return the reply of the remote device.
  @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
- @throws IllegalArgumentException if the packet is malformed ({@link #verifyRequest(ArduinoPacket)} throws an IllegalArgumentException).
- @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout */
-public ArduinoPacket sendSync(ArduinoPacket req) throws IOException, IllegalArgumentException, InterruptedException{
+ @throws IllegalArgumentException if the packet is malformed.
+ @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
+ @throws IllegalStateException    if not connected. */
+public ArduinoPacket sendSync(ArduinoPacket req) throws IOException, IllegalArgumentException, InterruptedException, IllegalStateException{
 	return sendSyncWait(req, PACKET_TIMEOUT);
 }
 
@@ -315,9 +353,10 @@ public ArduinoPacket sendSync(ArduinoPacket req) throws IOException, IllegalArgu
  @return the reply of the remote device.
  @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
- @throws IllegalArgumentException if the packet is malformed ({@link #verifyRequest(ArduinoPacket)} throws an IllegalArgumentException).
- @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout */
-public ArduinoPacket sendSyncByName(String funcName) throws IOException, IllegalArgumentException, InterruptedException{
+ @throws IllegalArgumentException if the packet is malformed.
+ @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
+ @throws IllegalStateException    if not connected. */
+public ArduinoPacket sendSyncByName(String funcName) throws IOException, IllegalArgumentException, IllegalStateException, InterruptedException{
 	return sendSyncWait(new ArduinoPacket(funcMapping.get(funcName), null, null), PACKET_TIMEOUT);
 }
 
@@ -329,9 +368,11 @@ public ArduinoPacket sendSyncByName(String funcName) throws IOException, Illegal
  @return the reply of the remote device.
  @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
- @throws IllegalArgumentException if the packet is malformed ({@link #verifyRequest(ArduinoPacket)} throws an IllegalArgumentException).
- @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout */
-public ArduinoPacket sendSyncByName(String funcName, byte[] payload) throws IOException, IllegalArgumentException, InterruptedException{
+ @throws IllegalArgumentException if the packet is malformed.
+ @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
+ @throws IllegalStateException    if not connected. */
+public ArduinoPacket sendSyncByName(String funcName, byte[] payload)
+		throws IOException, IllegalArgumentException, IllegalStateException, InterruptedException{
 	return sendSyncWait(new ArduinoPacket(funcMapping.get(funcName), payload, null), PACKET_TIMEOUT);
 }
 
@@ -341,17 +382,19 @@ public ArduinoPacket sendSyncByName(String funcName, byte[] payload) throws IOEx
  @param req          is the request to be added to the sendQueue. req.cmd needs to be [0, 255].
  @param milliseconds is the time the method waits for a reply before returning.
  @return the answer in form of an altered version of input parameter req.
- @throws IllegalArgumentException if the packet is malformed ({@link #verifyRequest(ArduinoPacket)} throws an IllegalArgumentException).
+ @throws IllegalArgumentException if the packet is malformed.
  @throws TimeoutException         if there is no answer received in time.
  @throws IOException              if an error occurred while sending, receiving or processing on the remote device.
- @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout */
-public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds) throws IOException, IllegalArgumentException, InterruptedException{
+ @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
+ @throws IllegalStateException    if not connected. */
+public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
+		throws IOException, IllegalArgumentException, IllegalStateException, InterruptedException{
 	if(milliseconds <= 0)
 		throw new TimeoutException();
 	verifyRequest(req);
 	synchronized(req){
 		req.cmd = req.cmd + ArduinoPacket.PROCESSING; // 0-FF -> 100-1FF to distinguish processed from not processed packets later
-		requests.add(req);
+		requests.put(req);
 		long t = System.currentTimeMillis();
 		long endTime = t + milliseconds;
 		while(true){
@@ -402,7 +445,7 @@ public byte[] receiveLongByName(String funcName) throws IOException, Interrupted
 			throw new IOException("Error in a2jMany");
 		msg = ans.msg;
 		if(msg[0] != 0) // user function's return value
-			return new byte[]{msg[0]};
+			return new byte[] {msg[0]};
 		tmp.append(msg, A2J_MANY_HEADER);
 		offset = tmp.length();
 	} while(msg[1] == 0); // a2jMany isLast
@@ -488,19 +531,20 @@ private class ArduinoWorker implements Runnable{
 	/** Default read timeout (for each byte). */
 	static final private int READ_TIMEOUT = PACKET_TIMEOUT / 2;
 
-	final private ConcurrentRingBuffer sendQueue;
+	final private ConcurrentRingBuffer<ArduinoPacket> sendQueue;
 	final private BufferedInputStream in;
 	final private BufferedOutputStream out;
 	private boolean run = true;
 	private byte seqNum = 0;
-	private StreamConnection connection;
+//	private StreamConnection connection;
 
-	ArduinoWorker(ConcurrentRingBuffer senderQueue, StreamConnection con) throws IOException{
+	ArduinoWorker(ConcurrentRingBuffer<ArduinoPacket> senderQueue, BufferedInputStream inputStream, BufferedOutputStream outputStream)
+			throws IOException{
 		sendQueue = senderQueue;
 		// 300 = max payload size + header + some escape bytes
-		connection = con;
-		in = new BufferedInputStream(con.openInputStream(), 300);
-		out = new BufferedOutputStream(con.openOutputStream(), 300);
+//		connection = con;
+		in = inputStream;
+		out = outputStream;
 	}
 
 	/**
@@ -511,11 +555,13 @@ private class ArduinoWorker implements Runnable{
 		run = false;
 	}
 
+	@Override
 	public void run(){
+		Exception lastEx = null;
 		while(run){
 			final ArduinoPacket req;
 			try{
-				req = (ArduinoPacket)sendQueue.remove();
+				req = sendQueue.take();
 			} catch(InterruptedException e){
 				// lets reevaluate the run condition
 				continue;
@@ -562,7 +608,12 @@ private class ArduinoWorker implements Runnable{
 				byte[] msg = new byte[len];
 				if(len > 0){
 					for(int i = 0; i < len; i++){
-						byte tmp = readByte();
+						byte tmp = 0;
+						try{
+							tmp = readByte();
+						} catch(IOException e){
+							e.printStackTrace();
+						}
 						msg[i] = tmp;
 						cSum ^= tmp;
 					}
@@ -577,42 +628,41 @@ private class ArduinoWorker implements Runnable{
 						throw new EOFException("Function offset was out of bounds");
 					case A2J_RET_TO:
 						int line = ((msg[0]&0xff)<<8) + (msg[1]&0xff);
-						throw new TimeoutException("Timeout while Arduino was receiving around line " + line);
+						throw new TimeoutException("Timeout while peer was receiving around line " + line);
 					case A2J_RET_CHKSUM:
 						throw new EOFException("Checksum of sent frame mismatched");
 				}
 			} catch(EOFException e){
 				// thrown by malformed frames... lets reevaluate the run condition
-				e.printStackTrace();
-				req.ex = e;
+//				e.printStackTrace();
+				lastEx = req.ex = e;
 			} catch(TimeoutException e){
 				// thrown by read timeouts... lets reevaluate the run condition
-				e.printStackTrace();
-				req.ex = e;
+//				e.printStackTrace();
+				lastEx = req.ex = e;
 			} catch(InterruptedIOException e){
 				// thrown by interrupted i/o operations... lets reevaluate the run condition
-				e.printStackTrace();
-				req.ex = e;
+//				e.printStackTrace();
+				lastEx = req.ex = e;
 			} catch(IOException e){
 				// thrown if the connection aborts (not interrupted) while we are reading, we better shutdown...?
-				req.ex = e;
+				lastEx = req.ex = e;
 				disconnect();
 			} catch(RuntimeException e){
 				e.printStackTrace(); // thrown by negative array indices etc. should not happen
-				req.ex = new IOException("Internal j2Arduino error in Worker: " + e.getMessage());
+				lastEx = req.ex = new IOException("Internal j2Arduino error in Worker: " + e.getMessage());
 			} finally{
 				req.cmd = cmd; // marks the packet as done
 				notifyListeners(req); // listeners of req need to be informed in all cases (normal, shutdown interrupt, connection abort)
 				fireActivityListeners(ArduinoActivityListener.STATE_INACTIVE);
 			}
 		}
-		Object[] sendPackets = sendQueue.getBuf();
-		synchronized(sendPackets){
-			sendQueue.disable();
-			int len = sendPackets.length;
-			IOException endEx = new IOException("Connection closed before the request was fully processed");
-			for(int i = 0; i < len; i++){
-				ArduinoPacket p = (ArduinoPacket)sendPackets[i];
+		synchronized(sendQueue){
+			sendQueue.setEnabled(false);
+			Iterator<ArduinoPacket> it = sendQueue.iterator();
+			IOException endEx = new IOException("Connection closed before the request was fully processed", lastEx);
+			while(it.hasNext()){
+				ArduinoPacket p = it.next();
 				if(p != null){
 					p.ex = endEx;
 					synchronized(p){
@@ -629,11 +679,10 @@ private class ArduinoWorker implements Runnable{
 			out.close();
 		} catch(IOException ignored){
 		}
-		try{
-			connection.close(); // worker should close streams first
-		} catch(IOException ignored){
-		}
-		disconnect();
+//		try{
+//			connection.close();
+//		} catch(IOException ignored){
+//		}
 	}
 
 	/**

@@ -8,6 +8,7 @@ import java.io.InterruptedIOException;
 
 /** A thread that polls its counterpart #a2jDebug periodically and prints the results to stderr. */
 public class Debug extends Thread{
+
 private Arduino arduino;
 private boolean run = true;
 /** The offset of the a2j function to be queried. */
@@ -31,8 +32,12 @@ public Debug(Arduino a, int debugCommand){
 	super(a.address + "-debug-thread");
 	arduino = a;
 
-	if(debugCommand < 0)
+	if(debugCommand < 0){
 		dbgCmd = arduino.getFuncMapping().get("a2jDebug");
+		if(dbgCmd < 0){
+			throw new IllegalStateException("No mapping for 'a2jDebug' found. Is -DA2J_DBG enabled?");
+		}
+	}
 	else
 		dbgCmd = debugCommand;
 }

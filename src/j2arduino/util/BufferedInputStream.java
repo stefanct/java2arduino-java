@@ -12,6 +12,7 @@ import java.io.InputStream;
  Additionally to usual blocking read methods this implementation provides non-blocking and temporarily blocking read methods.
  */
 public class BufferedInputStream extends InputStream{
+
 final static private int NOTHING = 0xFFFF;
 private InputStream in;
 private byte[] buf;
@@ -45,22 +46,22 @@ private int buffered(){
 /**
  Returns the last unread byte or throws a TimeoutException if no bytes can be read after \a ms.
 
- @param ms count of ms to wait for new data
+ @param ms count of minimum ms to wait for new data
  @return the last unread byte
  @throws IOException if an I/O error occurs */
 public int readWait(int ms) throws IOException{
-	do{
-		int tmp = readNoWait();
-		if(tmp != NOTHING)
-			return tmp;
-		try{
-			synchronized(this){
+	synchronized(this){
+		do{
+			int tmp = readNoWait();
+			if(tmp != NOTHING)
+				return tmp;
+			try{
 				wait(10);
+				ms -= 10;
+			} catch(InterruptedException ignored){
 			}
-		} catch(InterruptedException ignored){
-		}
-		ms -= 10;
-	} while(ms >= 0);
+		} while(ms >= 0);
+	}
 	throw new TimeoutException(getClass().getName() + ".readWait() timed out");
 }
 
@@ -82,26 +83,28 @@ public int readNoWait() throws IOException{
 			return NOTHING;
 		}
 	}
-	int strLen = in.available();
-	if(strLen > 0){
-		boolean overflow = write >= read;
-		int max1 = overflow ? bufLen : read;
-		int maxLen1 = max1 - write;
-
-		int len1 = maxLen1 < strLen ? maxLen1 : strLen;
-		write = (write + in.read(buf, write, len1)) % bufLen;
-		strLen = in.available();
-		if(overflow && write == bufLen && strLen > 0){
-			write = (write + in.read(buf, 0, read < strLen ? read : strLen)) % bufLen;
-		}
-	}
+//	int strLen = in.available();
+//	if(strLen > 0){
+//		boolean overflow = write >= read;
+//		int max1 = overflow ? bufLen : read;
+//		int maxLen1 = max1 - write;
+//
+//		int len1 = maxLen1 < strLen ? maxLen1 : strLen;
+//		write = (write + in.read(buf, write, len1)) % bufLen;
+//		strLen = in.available();
+//		if(overflow && write == bufLen && strLen > 0){
+//			write = (write + in.read(buf, 0, read < strLen ? read : strLen)) % bufLen;
+//		}
+//	}
 	return ret;
 }
 
+@Override
 public int available() throws IOException{
 	return in.available() + buffered();
 }
 
+@Override
 public int read() throws IOException{
 	int tmp = readNoWait();
 	if(tmp == NOTHING){
@@ -111,14 +114,17 @@ public int read() throws IOException{
 	}
 }
 
-public int read(byte[] b) throws IOException{
-	return super.read(b);
-}
-
-public int read(byte[] b, int off, int len) throws IOException{
-	return super.read(b, off, len);
-}
-
+//@Override
+//public int read(byte[] b) throws IOException{
+//	return super.read(b);
+//}
+//
+//@Override
+//public int read(byte[] b, int off, int len) throws IOException{
+//	return super.read(b, off, len);
+//}
+//
+@Override
 public void close() throws IOException{
 	super.close();
 	in.close();

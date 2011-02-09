@@ -2,6 +2,7 @@ package j2arduino.util;
 
 /** Similar to Vector, but stores bytes only. */
 public class ByteVector{
+
 private static final int DEF_CAP = 128;
 private byte[] array;
 private int curPos;

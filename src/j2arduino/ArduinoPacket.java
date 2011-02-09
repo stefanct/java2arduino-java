@@ -1,13 +1,13 @@
 package j2arduino;
 
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  ArduinoPackets are used as lightweight data exchange objects in %j2arduino and while communicating with its clients.
 
- An %ArduinoPacket may represent a request (e.g. when a %j2arduino client calls {@link Arduino#sendSync(ArduinoPacket)}) or a reply. It can
- also be used to propagate communication errors inside its {@link #ex} field.
-
+ An %ArduinoPacket may represent a request (e.g. when a %j2arduino client calls {@link Arduino#sendSync(ArduinoPacket)}) or a reply. It can also be
+ used to propagate communication errors inside its {@link #ex} field.
  */
 public class ArduinoPacket{
 
@@ -27,7 +27,7 @@ public ArduinoResponseListener listener;
 public IOException ex;
 
 /** Constant used internally in j2arduino to distinguish processed from unprocessed packets. */
-public static final int PROCESSING = 0x100;
+public static final int PROCESSING = 0x100; // == 256
 
 /**
  Creates a new ArduinoPacket and sets field cmd to \a cmd.
@@ -60,22 +60,23 @@ public ArduinoPacket(int command, byte[] payload, ArduinoResponseListener l){
 	ex = null;
 }
 
-/** Prints the content of various fields in human readable format to stdout. */
+/** Prints the content of various fields in human readable format to stderr. */
 public void print(){
-	System.out.println("cmd=" + cmd + " (0x" + Integer.toHexString(cmd) + ')');
+	PrintStream stream = System.err;
+	stream.println("cmd=" + cmd + " (0x" + Integer.toHexString(cmd) + ')');
 	if(msg != null){
-		if(msg.length > 255)
-			System.out.println("warning: length is > 255B");
+		if(msg.length > Arduino.A2J_MAX_PAYLOAD)
+			stream.println("warning: length is > "+Arduino.A2J_MAX_PAYLOAD);
 
 		for(int i = 0; i < msg.length; i++)
-			System.out.println("msg[" + i + "]=0x" + Integer.toHexString(msg[i]));
+			stream.println("msg[" + i + "]=0x" + Integer.toHexString(msg[i]));
 
 	} else
-		System.out.println("msg == null");
+		stream.println("msg == null");
 
-	System.out.println("listener = " + ((listener == null) ? "null" : listener.toString()));
-	System.out.println("exception = " + ((ex == null) ? "null" : ex.toString()));
-	System.out.println();
+	stream.println("listener = " + ((listener == null) ? "null" : listener.toString()));
+	stream.println("exception = " + ((ex == null) ? "null" : ex.toString()));
+	stream.println();
 }
 
 /** \defgroup packethelpers Packet creation helper methods
@@ -84,7 +85,7 @@ public void print(){
 
  Using little-endian allows easy read access of multibyte values like shown in this example:
  \code
-	uint16_t var = *(uint16_t*)(&packetBuffer[offset]);
+ uint16_t var = *(uint16_t*)(&packetBuffer[offset]);
  \endcode
 
  Writing is a bit awkward, but there exist \ref lilendianmacros "helper macros" for this problem. Natively it would look like this:
@@ -92,15 +93,16 @@ public void print(){
  uint16_t* tmp = (uint16_t*)(&packetBuffer[offset]); // first create a pointer to write to
  tmp[0] = var;
  \endcode
-*/
+ */
 //@{
+
 /**
  Helper method to extract little-endian unsigned integers from byte arrays.
 
  Can be used to easily convert uint16_t et al. received from Arduinos to Java's primitive integer types.
 
- Note that input values greater than 0x7FFFFFFF will be converted to a negative \a int and that no more than four bytes will contribute to
- the return value.
+ Note that input values greater than 0x7FFFFFFF will be converted to a negative \a int and that no more than four bytes will contribute to the return
+ value.
 
  @param source    byte array from which to read
  @param index     index where to start reading

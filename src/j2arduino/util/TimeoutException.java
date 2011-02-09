@@ -8,6 +8,7 @@ import java.io.IOException;
  desirable then TimeoutException should be declared and thrown.
  */
 public class TimeoutException extends IOException{
+
 /** The cause that led to this exception. */
 private Throwable cause;
 

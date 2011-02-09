@@ -7,38 +7,40 @@ private ConcurrentRingBufferTest(){
 }
 
 public static void main(String[] args) throws IOException, InterruptedException{
-	ConcurrentRingBuffer rb = new ConcurrentRingBuffer();
-	Thread c = new Consumer(rb);
-	Thread p = new Producer(rb, 1);
-	Thread c2 = new Consumer(rb);
-	Thread p2 = new Producer(rb, -1 );
-	c.start();
+	ConcurrentRingBuffer<String> rb = new ConcurrentRingBuffer<String>();
+	Thread c1 = new Consumer(rb, "c1");
+	Thread p1 = new Producer(rb, "p1");
+	Thread c2 = new Consumer(rb, "c2");
+	Thread p2 = new Producer(rb, "p2");
+	c1.start();
   	c2.start();
-	p.start();
+	p1.start();
 	p2.start();
 }
 
 private static class Consumer extends Thread{
-	private ConcurrentRingBuffer rb;
+	private ConcurrentRingBuffer<String> rb;
 
-	Consumer(ConcurrentRingBuffer rb){
+	Consumer(ConcurrentRingBuffer<String> rb, String name){
+		super(name);
 		this.rb = rb;
 	}
 
+	@Override
 	public void run(){
 		int i = 0;
 		while(true){
-			Object o;
+			String o;
 			try{
-				o = rb.remove();
+				o = rb.take();
 			} catch(InterruptedException e){
 				break;
 			}
 			System.out.println(this.getName() + " taking '" + o+'\'');
-			i = (i + 1) % rb.getBuf().length;
+			i++;
 			synchronized(this){
 				try{
-					wait(1400);
+					wait(400);
 				} catch(InterruptedException e){
 					e.printStackTrace();
 				}
@@ -48,27 +50,26 @@ private static class Consumer extends Thread{
 }
 
 private static class Producer extends Thread{
-	private ConcurrentRingBuffer rb;
-	private int f;
+	private ConcurrentRingBuffer<String> rb;
 
-	Producer(ConcurrentRingBuffer rb, int f){
+	Producer(ConcurrentRingBuffer<String> rb, String name){
+		super(name);
 		this.rb = rb;
-		this.f = f;
 	}
 
 	public void run(){
 		int i = 0;
 		while(true){
 			try{
-				rb.add(this.getName() + " " + i);
+				rb.put(this.getName() + " " + i);
 			} catch(InterruptedException e){
 				e.printStackTrace();
 			}
 			System.out.println(this.getName() + " added " + i);
-			i = (f*i + 1) % rb.getBuf().length;
+			i++;
 			synchronized(this){
 				try{
-					wait(1400);
+					wait(300);
 				} catch(InterruptedException e){
 					e.printStackTrace();
 				}

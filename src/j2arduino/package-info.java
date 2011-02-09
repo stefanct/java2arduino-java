@@ -6,7 +6,7 @@
  in a RMI-like fashion. {@link ArduinoGateway} can be queried for Bluetooth
  device in range, which will be represented as {@link Arduino} objects.
  After successfully connecting to an %Arduino, Java code can send arguments in the form
- of a byte array (up to 255 Bytes long) to specially crafted C functions
+ of a byte array (up to 255 Bytes/{@link Arduino.A2J_MAX_PAYLOAD} long) to specially crafted C functions
  on the microcontroller just by specifying
  the target function (by its string representation/name) and the byte array payload.
  Transactions can be done \link arduinoSync synchronously\endlink and

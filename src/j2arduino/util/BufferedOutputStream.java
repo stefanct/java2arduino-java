@@ -8,6 +8,7 @@ import java.io.OutputStream;
  without necessarily causing a call to the underlying system for each byte written.
  */
 public class BufferedOutputStream extends OutputStream{
+
 private OutputStream out;
 private byte[] buf;
 private int read;
@@ -19,6 +20,8 @@ private int write;
  @param outStream the underlying output stream
  @param bufSize   the buffer size */
 public BufferedOutputStream(OutputStream outStream, int bufSize){
+	if(bufSize == 0)
+		throw new IllegalArgumentException("The buffer size has to be >0");
 	out = outStream;
 	buf = new byte[bufSize];
 	write = 0;
@@ -34,6 +37,7 @@ public BufferedOutputStream(OutputStream outStream){
 }
 
 /** Flushes this buffered output stream. This forces any buffered output bytes to be written out to the underlying output stream. */
+@Override
 public void flush() throws IOException{
 	boolean overflow = read > write;
 	int bufLen = buf.length;
@@ -45,10 +49,10 @@ public void flush() throws IOException{
 		out.write(buf, 0, write);
 	}
 	read = write = 0;
-	super.flush();
 }
 
-/** Writes the specified byte to this buffered output stream. Flushes the buffer if there is no space available in buffer.*/
+/** Writes the specified byte to this buffered output stream. Flushes the buffer if there is no space available in buffer. */
+@Override
 public void write(int b) throws IOException{
 	int length = buf.length;
 	if(write == ((read - 1) % length))
@@ -57,9 +61,9 @@ public void write(int b) throws IOException{
 	write = (write + 1) % length;
 }
 
-/** Closes this output stream and releases any system resources associated with this stream.*/
+/** Closes this output stream and releases any system resources associated with this stream. */
+@Override
 public void close() throws IOException{
-	super.close();
 	out.close();
 }
 

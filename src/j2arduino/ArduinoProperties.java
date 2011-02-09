@@ -9,7 +9,8 @@ import java.util.Hashtable;
  If enabled on the remote device, this class can provide these pairs in the form of a mapping of option keys to option values.
  */
 public class ArduinoProperties{
-private final Hashtable ht;
+
+private final Hashtable<String, String> ht;
 private short funcOffset;
 
 /**
@@ -18,7 +19,7 @@ private short funcOffset;
  @param offset the offset used to query remote Arduinos for properties */
 protected ArduinoProperties(short offset){
 	funcOffset = offset;
-	ht = new Hashtable();
+	ht = new Hashtable<String, String>();
 }
 
 /**
@@ -54,10 +55,10 @@ protected void fetch(Arduino arduino, int timeout) throws IOException, Interrupt
 	byte[] msg = arduino.sendSyncWait(new ArduinoPacket(funcOffset, null, null), timeout).msg;
 	if(msg.length == 0)
 		return;
-	StringBuffer sb = new StringBuffer();
+	StringBuilder sb = new StringBuilder();
 	String first = null;
-	for(int i = 0; i < msg.length; i++){
-		switch(msg[i]){
+	for(byte aMsg : msg){
+		switch(aMsg){
 			case 0:
 				if(first == null){
 					first = sb.toString();
@@ -68,11 +69,11 @@ protected void fetch(Arduino arduino, int timeout) throws IOException, Interrupt
 				sb.setLength(0);
 				break;
 			default:
-				sb.append((char)msg[i]);
+				sb.append((char)aMsg);
 				break;
 		}
 	}
-	System.out.println("props: " + ht);
+	System.err.println("props: " + ht);
 }
 
 /**
@@ -98,7 +99,7 @@ public boolean containsKey(String key){
  @param key the key for which an option value is looked up
  @return the corresponding option value or null if there is none */
 public String get(String key){
-	return (String)ht.get(key);
+	return ht.get(key);
 }
 
 /** Clears all mapping between option keys and value. */
