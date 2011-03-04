@@ -1,36 +1,34 @@
-package j2arduino;
+package j2arduino.devices;
 
+import j2arduino.*;
+import j2arduino.util.BufferedInputStream;
+import j2arduino.util.BufferedOutputStream;
 import j2arduino.util.*;
 
-import javax.microedition.io.Connector;
-import javax.microedition.io.StreamConnection;
-import javax.usb.*;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Hashtable;
-import java.util.Iterator;
+import javax.usb.UsbException;
+import java.io.*;
+import java.util.*;
 
 /**
- Represents one remote ArduinoBT. After {@link #connect() connecting} various methods to send data or "call" methods are available. To listen for
- Bluetooth activity {@link #addActivityListener(ArduinoActivityListener)} provides the option to put {@link ArduinoActivityListener}s. All methods
- are thread-safe if not noted otherwise.
+ Represents one remote device. After {@link #connect(java.util.Hashtable) connecting} various methods to send data or "call" methods are available. To listen for link
+ activity {@link #addActivityListener(j2arduino.ArduinoActivityListener)} provides the option to put {@link j2arduino.ArduinoActivityListener}s. All
+ methods are thread-safe if not noted otherwise.
 
  @see j2arduino */
-public class Arduino{
+public abstract class Arduino{
 
 /** default timeout when calling sendSync(). 0 will block forever. */
 public static final int PACKET_TIMEOUT = 2500000;
 /** Default timeout for a connecting attempt. 0 will block forever. */
-public static final int CONNECTING_TIMEOUT = 3000000;
+public static final int CONNECTING_TIMEOUT = 300000;
+/**
+ An unique identifier for the hardware device represented by this object. Usually a string representation of the hardware address of the associated
+ device.
 
-/** UPPERCASE string representation of the bluetooth hardware address of associated ArduinoBT. */
+ @see Arduino#equals(Object) */
 public final String address;
-/** Human readable BT name of the corresponding remote Arduino device. */
+/** Human readable name of the corresponding remote Arduino device. */
 public final String name;
-private final UsbInterface usbIf;
 private final Collection<ArduinoActivityListener> listeners;
 private ConcurrentRingBuffer<ArduinoPacket> requests;
 /** Indicates connection state: 0 == disconnected, 1 == connecting, 2 == connected. */
@@ -46,37 +44,38 @@ private ArduinoProperties props;
 /** Maximum number of bytes to be transmitted as payload in arduino2j packets. */
 public static final int A2J_MAX_PAYLOAD = 255;
 /** Number of bytes of the a2jMany header. */
-private static final int A2J_MANY_HEADER = 6;
+public static final int A2J_MANY_HEADER = 6;
 /** Maximum number of bytes to be transmitted as payload in a2jMany packets. */
-private static final int A2J_MANY_PAYLOAD = A2J_MAX_PAYLOAD - A2J_MANY_HEADER;
-public static final byte USB_IN_EPNUM = (byte)2;
-public static final byte USB_OUT_EPNUM = (byte)(0x80|1);
+public static final int A2J_MANY_PAYLOAD = A2J_MAX_PAYLOAD - A2J_MANY_HEADER;
+public static final int BUFFER_SIZE = 300;
 //@}
 
-/**
- Creates an Arduino instance.
-
- @param btAddress the Bluetooth address of this Arduino.
- @param btName    the human readable name of this Arduino. Should match the string returned by RemoteDevice#getFriendlyName for address \a
- btAddress. */
-Arduino(String btAddress, String btName){
-	this(btAddress, btName, null);
-}
-
-public Arduino(String btAddress, String btName, UsbDevice dev){
-	usbIf = dev.getActiveUsbConfiguration().getUsbInterface((byte)0);
-	address = btAddress;
-	name = btName;
-	listeners = new ArrayList<ArduinoActivityListener>(0);
-	connected = (byte)0;
-	workerThread = null;
-	funcMapping = null;
+public Arduino(String name, String address){
 	props = null;
-	worker = null;
+	connected = (byte)0;
+	this.name = name;
+	funcMapping = null;
 	requests = new ConcurrentRingBuffer<ArduinoPacket>(8, "Connection closed");
+	this.address = address;
+	workerThread = null;
+	worker = null;
+	listeners = new ArrayList<ArduinoActivityListener>(1);
 }
 
-/** \defgroup arduinoConnection Arduino methods (connection related)*/
+/**
+ Arduinos are uniquely identified by their addresses. Whoever instantiates objects of this type is responsible for providing system-wide unique
+ identifiers. If the underlying protocol does not provide such identifiers they must be generated.
+
+ Two Arduinos are equal if their addresses are equal.
+ */
+@Override
+public boolean equals(Object o){
+	if(o == null)
+		return false;
+	if(!(o instanceof Arduino))
+		return false;
+	return ((Arduino)o).address.equals(address);
+} /** \defgroup arduinoConnection Arduino methods (connection related) */
 /**
  Creates a new connection.
 
@@ -87,7 +86,7 @@ public Arduino(String btAddress, String btName, UsbDevice dev){
 
  @param functionMapping a constant function mapping (may be null).
  @return true if the connection was established due to this call, false otherwise
- @throws IOException          if no connection could be established.
+ @throws java.io.IOException  if no connection could be established.
  @throws InterruptedException If the calling thread is interrupted before the connecting attempt succeeded */
 public boolean connect(Hashtable functionMapping) throws IOException, InterruptedException, UsbException{
 	synchronized(this){
@@ -95,33 +94,11 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 			return false;
 		fireActivityListeners(ArduinoActivityListener.STATE_ACTIVE);
 		try{
-			if(usbIf != null){
-				if(usbIf == null)
-					throw new UsbException(address + " is not configured");
-				usbIf.claim();
-				UsbEndpoint outEndpoint = usbIf.getUsbEndpoint(USB_IN_EPNUM);
-				UsbPipe outPipe = outEndpoint.getUsbPipe();
-				outPipe.open();
-
-				UsbEndpoint inEndpoint = usbIf.getUsbEndpoint(USB_OUT_EPNUM);
-				UsbPipe inPipe = inEndpoint.getUsbPipe();
-				inPipe.open();
-
-				worker = new ArduinoWorker(requests,
-				                           new BufferedInputStream(new UsbInputStream(inPipe), 300),
-				                           new BufferedOutputStream(new UsbOutputStream(outPipe), 300));
-//				final UsbStreamConnection con = new UsbStreamConnection(inPipe, outPipe);
-//				worker = new ArduinoWorker(requests,
-//				                           new BufferedInputStream(con.openInputStream(), 300),
-//				                           new BufferedOutputStream(con.openOutputStream(), 300));
-			} else{
-				worker = new ArduinoWorker(requests,
-				                           new BufferedInputStream(((StreamConnection)Connector.open("btspp://" + address + ":1",
-				                                                                                     Connector.READ_WRITE)).openInputStream(), 300),
-				                           new BufferedOutputStream(((StreamConnection)Connector.open("btspp://" + address + ":1",
-				                                                                                      Connector.READ_WRITE)).openOutputStream(),
-				                                                    300));
-			}
+			final InputStream inputStream = openInputStream();
+			final OutputStream outputStream = openOutputStream();
+			worker = new ArduinoWorker(requests,
+			                           new BufferedInputStream(inputStream, BUFFER_SIZE),
+			                           new BufferedOutputStream(outputStream, BUFFER_SIZE));
 		} finally{
 			fireActivityListeners(ArduinoActivityListener.STATE_INACTIVE);
 		}
@@ -131,8 +108,9 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 		props = new ArduinoProperties(funcMapping.get("a2jGetPropsOffset"));
 		connected = 1;
 	}
-	int tries = 2;
+	int tries = 1;
 	while(true){
+		System.err.println(2 - tries + ". try");
 		long startTime = System.currentTimeMillis();
 		IOException e = null;
 		InterruptedException ie = null;
@@ -154,7 +132,6 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 			ie = ex;
 		}
 		tries--;
-		System.err.println(2-tries+"th try");
 
 		if(tries <= 0){
 			disconnect();
@@ -170,6 +147,16 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 	fireActivityListeners(ArduinoActivityListener.STATE_CONNECTED);
 	return true;
 }
+
+protected boolean isAvailable(){
+	return false;
+}
+
+protected abstract OutputStream openOutputStream() throws UsbException, IOException;
+
+protected abstract InputStream openInputStream() throws UsbException, IOException;
+
+protected abstract void closeStreams();
 
 /** Stops the working thread, tears down the connection, notifies all listeners. \ingroup arduinoConnection */
 public void disconnect(){
@@ -194,15 +181,7 @@ public void disconnect(){
 			worker = null;
 		}
 	}
-	if(usbIf != null){
-		try{
-			usbIf.getUsbEndpoint(USB_OUT_EPNUM).getUsbPipe().close();
-			usbIf.getUsbEndpoint(USB_IN_EPNUM).getUsbPipe().close();
-			usbIf.release();
-		} catch(UsbException ignored){
-			ignored.printStackTrace();
-		}
-	}
+	closeStreams();
 	funcMapping.clear();
 	props.clear();
 	fireActivityListeners(ArduinoActivityListener.STATE_DISCONNECTED);
@@ -337,7 +316,7 @@ public void sendAsync(ArduinoPacket req) throws IllegalArgumentException, Illega
 
  @param req the request to be sent.
  @return the reply of the remote device.
- @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
+ @throws java.io.IOException      if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
  @throws IllegalArgumentException if the packet is malformed.
  @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
@@ -351,7 +330,7 @@ public ArduinoPacket sendSync(ArduinoPacket req) throws IOException, IllegalArgu
 
  @param funcName the name of the function to be called.
  @return the reply of the remote device.
- @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
+ @throws java.io.IOException      if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
  @throws IllegalArgumentException if the packet is malformed.
  @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
@@ -366,7 +345,7 @@ public ArduinoPacket sendSyncByName(String funcName) throws IOException, Illegal
  @param funcName the name of the function to be called.
  @param payload  the payload to be sent.
  @return the reply of the remote device.
- @throws IOException              if an error occurred while sending, receiving or processing on the remote device (including {@link
+ @throws java.io.IOException      if an error occurred while sending, receiving or processing on the remote device (including {@link
  j2arduino.util.TimeoutException TimeoutException}).
  @throws IllegalArgumentException if the packet is malformed.
  @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
@@ -383,8 +362,9 @@ public ArduinoPacket sendSyncByName(String funcName, byte[] payload)
  @param milliseconds is the time the method waits for a reply before returning.
  @return the answer in form of an altered version of input parameter req.
  @throws IllegalArgumentException if the packet is malformed.
- @throws TimeoutException         if there is no answer received in time.
- @throws IOException              if an error occurred while sending, receiving or processing on the remote device.
+ @throws j2arduino.util.TimeoutException
+ if there is no answer received in time.
+ @throws java.io.IOException      if an error occurred while sending, receiving or processing on the remote device.
  @throws InterruptedException     if the calling thread is interrupted while waiting for space in the sender queue or for the timeout
  @throws IllegalStateException    if not connected. */
 public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
@@ -415,10 +395,6 @@ public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
 		}
 	}
 }
-//@}
-
-/** @addtogroup j2amany Oversize data*/
-//@{
 
 /**
  Receives a large block of data from the device represented by this instance. Uses the scheme described \ref j2amanydetails "here" to query
@@ -426,7 +402,7 @@ public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
 
  @param funcName the CMD_P_MANY-compatible method to be "called".
  @return A byte array consisting of: all small blocks in the order received, or the return value of \a funcName if it is non-null.
- @throws IOException          if an error occurred while sending, receiving or processing on the remote device.
+ @throws java.io.IOException  if an error occurred while sending, receiving or processing on the remote device.
  @throws InterruptedException if the calling thread is interrupted while waiting for space in the sender queue or for a timeout. */
 public byte[] receiveLongByName(String funcName) throws IOException, InterruptedException{
 	byte funcOff = funcMapping.get(funcName);
@@ -460,7 +436,7 @@ public byte[] receiveLongByName(String funcName) throws IOException, Interrupted
  @param payload  the data to be sent.
  @return if \a funcName returns a non-null value before the last chunk this value is negated and returned, else the last return value of \a funcName
  is returned.
- @throws IOException          if an error occurred while sending, receiving or processing on the remote device.
+ @throws java.io.IOException  if an error occurred while sending, receiving or processing on the remote device.
  @throws InterruptedException if the calling thread is interrupted while waiting for space in the sender queue or for the timeout. */
 public int sendLongByName(String funcName, byte[] payload) throws IOException, InterruptedException{
 	byte funcOff = funcMapping.get(funcName);
@@ -541,8 +517,6 @@ private class ArduinoWorker implements Runnable{
 	ArduinoWorker(ConcurrentRingBuffer<ArduinoPacket> senderQueue, BufferedInputStream inputStream, BufferedOutputStream outputStream)
 			throws IOException{
 		sendQueue = senderQueue;
-		// 300 = max payload size + header + some escape bytes
-//		connection = con;
 		in = inputStream;
 		out = outputStream;
 	}
@@ -609,11 +583,11 @@ private class ArduinoWorker implements Runnable{
 				if(len > 0){
 					for(int i = 0; i < len; i++){
 						byte tmp = 0;
-						try{
-							tmp = readByte();
-						} catch(IOException e){
-							e.printStackTrace();
-						}
+//						try{
+						tmp = readByte();
+//						} catch(IOException e){
+//							e.printStackTrace();
+//						}
 						msg[i] = tmp;
 						cSum ^= tmp;
 					}
@@ -679,10 +653,6 @@ private class ArduinoWorker implements Runnable{
 			out.close();
 		} catch(IOException ignored){
 		}
-//		try{
-//			connection.close();
-//		} catch(IOException ignored){
-//		}
 	}
 
 	/**
@@ -709,7 +679,7 @@ private class ArduinoWorker implements Runnable{
 	 If the given argument has to be escaped, it writes #A2J_ESC first and then \a data-1. @see a2jframing
 
 	 @param data the byte to write
-	 @throws IOException if an I/O error occurs
+	 @throws java.io.IOException if an I/O error occurs
 	 */
 	private void writeByte(int data) throws IOException{
 		if(data == A2J_SOF || data == A2J_ESC){
@@ -727,7 +697,7 @@ private class ArduinoWorker implements Runnable{
 	 after it has been incremented.
 
 	 @return The next byte after de-escaping
-	 @throws IOException If an I/O error occurs or #A2J_SOF is read first
+	 @throws java.io.IOException If an I/O error occurs or #A2J_SOF is read first
 	 */
 	private byte readByte() throws IOException{
 		byte data = (byte)(in.readWait(READ_TIMEOUT));

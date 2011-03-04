@@ -1,13 +1,15 @@
 package j2arduino;
 
+import j2arduino.devices.Arduino;
+
 import java.io.IOException;
 import java.io.PrintStream;
 
 /**
- ArduinoPackets are used as lightweight data exchange objects in %j2arduino and while communicating with its clients.
+ ArduinoPackets are used as lightweight data exchange objects in {@link j2arduino} and while communicating with its clients.
 
- An %ArduinoPacket may represent a request (e.g. when a %j2arduino client calls {@link Arduino#sendSync(ArduinoPacket)}) or a reply. It can also be
- used to propagate communication errors inside its {@link #ex} field.
+ An ArduinoPacket may represent a request (e.g. when a {@link j2arduino} client calls {@link j2arduino.devices.Arduino#sendSync(ArduinoPacket)}) or a
+ reply. It can also be used to propagate communication errors inside its {@link #ex} field.
  */
 public class ArduinoPacket{
 
@@ -23,7 +25,7 @@ public ArduinoResponseListener listener;
 /**
  Used to propagate communication errors to j2arduino clients.
 
- @see j2arduino.Arduino.ArduinoWorker#run() */
+ @see j2arduino.devices.Arduino.ArduinoWorker#run() */
 public IOException ex;
 
 /** Constant used internally in j2arduino to distinguish processed from unprocessed packets. */
@@ -66,7 +68,7 @@ public void print(){
 	stream.println("cmd=" + cmd + " (0x" + Integer.toHexString(cmd) + ')');
 	if(msg != null){
 		if(msg.length > Arduino.A2J_MAX_PAYLOAD)
-			stream.println("warning: length is > "+Arduino.A2J_MAX_PAYLOAD);
+			stream.println("warning: length is > " + Arduino.A2J_MAX_PAYLOAD);
 
 		for(int i = 0; i < msg.length; i++)
 			stream.println("msg[" + i + "]=0x" + Integer.toHexString(msg[i]));

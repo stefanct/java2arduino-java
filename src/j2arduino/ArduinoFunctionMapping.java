@@ -1,5 +1,7 @@
 package j2arduino;
 
+import j2arduino.devices.Arduino;
+
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -7,8 +9,8 @@ import java.util.Iterator;
 /**
  Represents a mapping between function names that can be called on remote Arduinos and their offsets.
 
- If enabled at the remote device and not overridden by a constant default, a mapping between (the string representation of) \link #CMD_P specific
- functions \endlink and their offset in a function pointer array (located at the device) will be read upon connecting to it.
+ If enabled at the remote device and not overridden by a constant default, a mapping between (the string representation of) the callable
+ functions and their offset in a function pointer array (located at the device) will be read upon connecting to it.
  */
 public class ArduinoFunctionMapping{
 
@@ -32,7 +34,7 @@ protected ArduinoFunctionMapping(){
  is null, an empty mapping is created, which can be populated later by calling {@link #fetch}.
 
  @param mapping the fixed mapping or null */
-protected ArduinoFunctionMapping(Hashtable mapping){
+public ArduinoFunctionMapping(Hashtable mapping){
 	if(mapping != null){
 		int size = mapping.size();
 		if(size > 256)

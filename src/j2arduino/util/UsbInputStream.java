@@ -1,12 +1,8 @@
 package j2arduino.util;
 
-import javax.usb.UsbException;
-import javax.usb.UsbIrp;
-import javax.usb.UsbPipe;
+import javax.usb.*;
 import javax.usb.util.DefaultUsbIrp;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
+import java.io.*;
 import java.util.Arrays;
 
 import static sun.security.pkcs11.wrapper.Functions.toHexString;
@@ -29,13 +25,13 @@ public int read() throws IOException{
 	try{
 		while(start > end){
 			UsbIrp irp = new DefaultUsbIrp(buffer, 0, buffer.length, true);
-			System.err.println("calling pipe.syncSubmit "+irp);
+			System.err.println("calling pipe.syncSubmit " + irp);
 			in.syncSubmit(irp);
 			start = 0;
 			int actLen = irp.getActualLength();
 			end = actLen - 1;
 			if(actLen > 0)
-				System.err.println(toHexString(Arrays.copyOfRange(buffer,0,actLen))+" returned");
+				System.err.println(toHexString(Arrays.copyOfRange(buffer, 0, actLen)) + " buffered in UsbInputStream");
 			else
 				System.err.println("emtpy IRP returned");
 		}
@@ -46,7 +42,7 @@ public int read() throws IOException{
 			InterruptedIOException ex = new InterruptedIOException();
 			ex.initCause(e);
 			throw ex;
-		}else
+		} else
 			throw new IOException("Receiving from an UsbPipe failed", e);
 	}
 }

@@ -4,10 +4,10 @@ package j2arduino;
  Implementers of this class can be asynchronously notified of replies to requests sent to Arduinos.
 
  To be notified, implementers have to be assigned to the {@link j2arduino.ArduinoPacket#listener listener field} of the corresponding request packet
- before calling a send method of {@link j2arduino.Arduino}.
+ before calling a send method of {@link j2arduino.devices.Arduino}.
 
  @see j2arduino.ArduinoPacket#listener
- @see j2arduino.Arduino.ArduinoWorker#notifyListeners(ArduinoPacket) */
+ @see j2arduino.devices.Arduino.ArduinoWorker#notifyListeners(ArduinoPacket) */
 public interface ArduinoResponseListener{
 
 /**

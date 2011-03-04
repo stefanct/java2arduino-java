@@ -1,10 +1,12 @@
 package j2arduino;
 
+import j2arduino.devices.Arduino;
+
 import java.io.IOException;
 import java.util.Hashtable;
 
 /**
- %ArduinoProperties are pairs of strings, that represent properties of remote Arduinos.
+ ArduinoProperties are pairs of strings, that represent properties of remote Arduinos.
 
  If enabled on the remote device, this class can provide these pairs in the form of a mapping of option keys to option values.
  */
@@ -17,7 +19,7 @@ private short funcOffset;
  Creates a new property mapping with a given function offset.
 
  @param offset the offset used to query remote Arduinos for properties */
-protected ArduinoProperties(short offset){
+public ArduinoProperties(short offset){
 	funcOffset = offset;
 	ht = new Hashtable<String, String>();
 }
@@ -36,7 +38,7 @@ public void setFuncOffset(short offset){
  @param arduino the Arduino to be queried
  @throws IOException          if there is a communication problem or the timeout expires
  @throws InterruptedException if the thread is interrupted before a reply is received */
-protected void fetch(Arduino arduino) throws IOException, InterruptedException{
+public void fetch(Arduino arduino) throws IOException, InterruptedException{
 	fetch(arduino, Arduino.PACKET_TIMEOUT);
 }
 
@@ -47,7 +49,7 @@ protected void fetch(Arduino arduino) throws IOException, InterruptedException{
  @param timeout the timeout after which a {@link j2arduino.util.TimeoutException} is thrown
  @throws IOException          if there is a communication problem or the timeout expires
  @throws InterruptedException if the thread is interrupted before a reply is received */
-protected void fetch(Arduino arduino, int timeout) throws IOException, InterruptedException{
+public void fetch(Arduino arduino, int timeout) throws IOException, InterruptedException{
 	if(funcOffset < 0){
 		return;
 	}

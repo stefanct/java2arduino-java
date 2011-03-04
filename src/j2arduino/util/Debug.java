@@ -1,7 +1,7 @@
 package j2arduino.util;
 
-import j2arduino.Arduino;
 import j2arduino.ArduinoPacket;
+import j2arduino.devices.Arduino;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -37,8 +37,7 @@ public Debug(Arduino a, int debugCommand){
 		if(dbgCmd < 0){
 			throw new IllegalStateException("No mapping for 'a2jDebug' found. Is -DA2J_DBG enabled?");
 		}
-	}
-	else
+	} else
 		dbgCmd = debugCommand;
 }
 

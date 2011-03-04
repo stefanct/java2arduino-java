@@ -1,12 +1,11 @@
 package j2arduino.util;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 /**
  Adds functionality to another input stream-namely, the ability to buffer the input.
 
- When the %BufferedInputStream is created, an internal buffer array is created. As bytes from the stream are read or skipped, the internal buffer is
+ When the BufferedInputStream is created, an internal buffer array is created. As bytes from the stream are read or skipped, the internal buffer is
  refilled as necessary from the contained input stream, many bytes at a time.
 
  Additionally to usual blocking read methods this implementation provides non-blocking and temporarily blocking read methods.
@@ -20,7 +19,7 @@ private int read;
 private int write;
 
 /**
- Creates a %BufferedInputStream with the specified buffer size.
+ Creates a BufferedInputStream with the specified buffer size.
 
  @param inStream the underlying InputStream
  @param size     the maximum number of bytes buffered by this instance */
@@ -48,21 +47,27 @@ private int buffered(){
 
  @param ms count of minimum ms to wait for new data
  @return the last unread byte
- @throws IOException if an I/O error occurs */
+ @throws IOException            if an I/O error occurs
+ @throws InterruptedIOException if this thread was interrupted while reading */
 public int readWait(int ms) throws IOException{
 	synchronized(this){
-		do{
-			int tmp = readNoWait();
-			if(tmp != NOTHING)
-				return tmp;
-			try{
-				wait(10);
-				ms -= 10;
-			} catch(InterruptedException ignored){
-			}
-		} while(ms >= 0);
+//		do{
+////			int tmp = readNoWait();
+////			if(tmp != NOTHING)
+////				return tmp;
+////			try{
+////				wait(10);
+////				ms -= 10;
+////			} catch(InterruptedException ignored){
+////			}
+//		} while(ms >= 0);
+		try{
+			return in.read();
+		} catch(InterruptedIOException e){
+			throw new TimeoutException(getClass().getName() + ".readWait() was interrupted", e);
+		}
 	}
-	throw new TimeoutException(getClass().getName() + ".readWait() timed out");
+//	throw new TimeoutException(getClass().getName() + ".readWait() timed out");
 }
 
 /**
@@ -124,6 +129,7 @@ public int read() throws IOException{
 //	return super.read(b, off, len);
 //}
 //
+
 @Override
 public void close() throws IOException{
 	super.close();

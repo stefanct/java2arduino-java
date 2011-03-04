@@ -1,5 +1,7 @@
 package j2arduino;
 
+import j2arduino.devices.Arduino;
+
 /**
  Implementers of this interface can be attached to Arduinos and ArduinoGateways to monitor their bluetooth activity. They will be notified, if these
  use any BT devices.
