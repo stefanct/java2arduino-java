@@ -1,8 +1,6 @@
 package j2arduino.devices;
 
 import j2arduino.*;
-import j2arduino.util.BufferedInputStream;
-import j2arduino.util.BufferedOutputStream;
 import j2arduino.util.*;
 
 import javax.usb.UsbException;
@@ -10,9 +8,9 @@ import java.io.*;
 import java.util.*;
 
 /**
- Represents one remote device. After {@link #connect(java.util.Hashtable) connecting} various methods to send data or "call" methods are available. To listen for link
- activity {@link #addActivityListener(j2arduino.ArduinoActivityListener)} provides the option to put {@link j2arduino.ArduinoActivityListener}s. All
- methods are thread-safe if not noted otherwise.
+ Represents one remote device. After {@link #connect(java.util.Hashtable) connecting} various methods to send data or "call" methods are available.
+ To listen for link activity {@link #addActivityListener(j2arduino.ArduinoActivityListener)} provides the option to put {@link
+j2arduino.ArduinoActivityListener}s. All methods are thread-safe if not noted otherwise.
 
  @see j2arduino */
 public abstract class Arduino{
@@ -504,15 +502,11 @@ private class ArduinoWorker implements Runnable{
 	static final private byte A2J_RET_CHKSUM = (byte)0xF3;
 	//@}
 
-	/** Default read timeout (for each byte). */
-	static final private int READ_TIMEOUT = PACKET_TIMEOUT / 2;
-
 	final private ConcurrentRingBuffer<ArduinoPacket> sendQueue;
 	final private BufferedInputStream in;
 	final private BufferedOutputStream out;
 	private boolean run = true;
 	private byte seqNum = 0;
-//	private StreamConnection connection;
 
 	ArduinoWorker(ConcurrentRingBuffer<ArduinoPacket> senderQueue, BufferedInputStream inputStream, BufferedOutputStream outputStream)
 			throws IOException{
@@ -582,12 +576,7 @@ private class ArduinoWorker implements Runnable{
 				byte[] msg = new byte[len];
 				if(len > 0){
 					for(int i = 0; i < len; i++){
-						byte tmp = 0;
-//						try{
-						tmp = readByte();
-//						} catch(IOException e){
-//							e.printStackTrace();
-//						}
+						byte tmp = readByte();
 						msg[i] = tmp;
 						cSum ^= tmp;
 					}
@@ -624,7 +613,7 @@ private class ArduinoWorker implements Runnable{
 				disconnect();
 			} catch(RuntimeException e){
 				e.printStackTrace(); // thrown by negative array indices etc. should not happen
-				lastEx = req.ex = new IOException("Internal j2Arduino error in Worker: " + e.getMessage());
+				lastEx = req.ex = new IOException("Internal j2Arduino error in Worker: " + e.getMessage(), e);
 			} finally{
 				req.cmd = cmd; // marks the packet as done
 				notifyListeners(req); // listeners of req need to be informed in all cases (normal, shutdown interrupt, connection abort)
@@ -658,7 +647,7 @@ private class ArduinoWorker implements Runnable{
 	/**
 	 Notifies all listeners of an ArduinoPacket that the processing finished.
 
-	 Either the explicit listener of ArduinoPacket \a req will be called back to handle the answer or all threads, that synchronize on \a req will be
+	 If set the explicit listener of ArduinoPacket \a req will be called back to handle the answer and all threads, that synchronize on \a req will be
 	 notified.
 
 	 @param req the request that was processed
@@ -666,10 +655,9 @@ private class ArduinoWorker implements Runnable{
 	private void notifyListeners(ArduinoPacket req){
 		if(req.listener != null){
 			req.listener.handleResponse(req);
-		} else{
-			synchronized(req){
-				req.notifyAll();
-			}
+		}
+		synchronized(req){
+			req.notifyAll();
 		}
 	}
 
@@ -700,11 +688,11 @@ private class ArduinoWorker implements Runnable{
 	 @throws java.io.IOException If an I/O error occurs or #A2J_SOF is read first
 	 */
 	private byte readByte() throws IOException{
-		byte data = (byte)(in.readWait(READ_TIMEOUT));
+		byte data = (byte)(in.read());
 		if(data == A2J_SOF)
 			throw new EOFException("Unescaped delimiter character inside frame");
 		if(data == A2J_ESC)
-			data = (byte)(in.readWait(READ_TIMEOUT) + 1);
+			data = (byte)(in.read() + 1);
 		return data;
 	}
 }
