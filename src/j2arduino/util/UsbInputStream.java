@@ -11,13 +11,16 @@ public class UsbInputStream extends InputStream{
 
 protected final UsbPipe in;
 private final byte[] buffer;
-private int end;
+/** Index of the first buffered byte.*/
 private int start;
+/** Index of the last buffered byte.*/
+private int end;
 
 public UsbInputStream(UsbPipe inPipe){
 	in = inPipe;
 	buffer = new byte[in.getUsbEndpoint().getUsbEndpointDescriptor().wMaxPacketSize()];
-	start = end = 0;
+	start = 0;
+	end = -1;
 }
 
 @Override
@@ -59,15 +62,17 @@ public int read(byte[] b, int off, int len) throws IOException{
 	} else
 		ret = 0;
 
-	int max = off + Math.min(len - ret, available());
+	// min(bytes requested, bytes buffered)
+	final int toRead = Math.min(len - ret, available());
+	final int max = off + toRead;
 	for(; off < max; off++){
 		b[off] = buffer[start++];
 	}
-	return ret + max;
+	return ret + toRead;
 }
 
 @Override
-public int available() throws IOException{
+public int available(){
 	return end - start + 1;
 }
 }
