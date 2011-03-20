@@ -73,7 +73,14 @@ public boolean equals(Object o){
 	if(!(o instanceof Arduino))
 		return false;
 	return ((Arduino)o).address.equals(address);
-} /** \defgroup arduinoConnection Arduino methods (connection related) */
+}
+
+@Override
+public int hashCode(){
+	return address.hashCode();
+}
+
+/** \defgroup arduinoConnection Arduino methods (connection related) */
 /**
  Creates a new connection.
 
