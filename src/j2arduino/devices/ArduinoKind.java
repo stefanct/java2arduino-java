@@ -4,9 +4,13 @@ import javax.usb.UsbException;
 import java.io.IOException;
 import java.util.HashSet;
 
+/** An ArduinoKind represents one type of protocol that is used to communicate with the microcontrollers. */
 public interface ArduinoKind{
 
-/** Tries to load the subsystem necessary for this kind of underlying protocol and reports its availability. */
+/**
+ Tries to load the subsystem necessary for this kind of underlying protocol and reports its availability.
+
+ @return true if the subsystem is available and seems to be functional. */
 public abstract boolean isAvailable();
 
 /**

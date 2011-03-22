@@ -1,4 +1,4 @@
-/** Provides classes to interact with AVR microcontrollers via a serial link over bluetooth.
+/** Provides classes to interact with AVR microcontrollers.
 
  j2arduino and its counterpart arduino2j (implemented in C) allow to communicate between Java (standard edition) enabled devices and
  embedded devices such as <a href="http://www.arduino.cc/en/Guide/ArduinoBT">ArduinoBTs</a> via different underlying 
@@ -8,13 +8,13 @@
  After successfully connecting to an {@link j2arduino.devices.Arduino}, Java code can send arguments in the form
  of a byte array (up to 255/{@link j2arduino.devices.Arduino#A2J_MAX_PAYLOAD} Bytes long) to specially crafted C functions
  on the microcontroller just by specifying
- the target function (by its string representation/name) and the byte array payload.
+ the target function (by its string representation/name with the help of {@link j2arduino.ArduinoFunctionMapping}) and the byte array payload.
  Transactions can be done {@link arduinoSync synchronously} and
  {@link arduinoAsync asynchronously}.
  There exist also methods for \ref j2amany "bigger payloads".
 
- {@link j2arduino.ArduinoActivityListener} allows implementers to monitor Bluetooth activities of
- any of the j2arduino classes. Also it is possible to read out static properties from remote devices
+ {@link j2arduino.ArduinoActivityListener} allows implementers to monitor any transmission activities.
+ Also j2arduino can read out static properties from remote devices
  (e.g. characteristics that vary from device to device but have to be taken into account by a
  single Java program) with the help of {@link j2arduino.ArduinoProperties}.
 

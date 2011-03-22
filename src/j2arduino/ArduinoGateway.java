@@ -13,8 +13,10 @@ public class ArduinoGateway implements ArduinoActivityListener{
 private final HashMap<String, Arduino> arduinos = new HashMap<String, Arduino>(1);
 private final Set<ArduinoActivityListener> listeners = new HashSet<ArduinoActivityListener>(2);
 private final Object discoveryLock = new Object();
+/** Stores kinds of arduinos which are currently enabled and available (according to their {@link j2arduino.devices.ArduinoKind#isAvailable()} method. */
 private final ArduinoKind[] availableKinds;
 
+/** Name of the properties file where different settings like selected kinds are stored. */
 public static final String PROPERTIES_FILE = "j2arduino.properties";
 
 // singleton stuff
@@ -82,9 +84,8 @@ synchronized public static ArduinoGateway getInstance() throws IOException{
 /**
  Returns available Arduinos.
 
- This will start a discovery process on all {@link #availableKinds available kinds of busses} using {@link
-j2arduino.devices.ArduinoKind#getAvailableArduinos(boolean)}. Each kind decides if an evaluated device is usable by different characteristics (i.e.
- usually constant fields provided by the underlying protocols).
+ This will start a discovery process on all available kinds of busses using {@link j2arduino.devices.ArduinoKind#getAvailableArduinos(boolean)}. Each
+ kind decides if an evaluated device is usable by different characteristics (i.e. usually constant fields provided by the underlying protocols).
 
  @param updateNow forces a search for new devices and invalidates the cache of known Arduinos.
  @return A collection containing all Arduinos found (usually without duplicates).
@@ -160,7 +161,8 @@ private void fireActivityListeners(int newState, Arduino arduino){
  Adds an Arduino to the gateway's database.
 
  This can be used to preset Arduinos (e.g. to speed up user interaction, when remote devices are known and discovery can be skipped).
- */
+
+ @param arduino the arduino to be added */
 public void addArduino(Arduino arduino){
 	String address = arduino.address.toUpperCase();
 	synchronized(arduinos){

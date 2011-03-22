@@ -42,6 +42,7 @@ public Debug(Arduino a, int debugCommand){
 }
 
 /** Fetches debug output from \a arduino. */
+@Override
 public void run(){
 	while(run){
 		try{

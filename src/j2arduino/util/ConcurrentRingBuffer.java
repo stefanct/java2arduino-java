@@ -13,6 +13,7 @@ import java.util.concurrent.BlockingQueue;
 
  It is possible to disable adding and removing elements globally, which will raise exception if it is tried. A custom string can be set as detail
  message for those exceptions.
+ * @param <E> the type of elements held in this collection
  */
 public class ConcurrentRingBuffer<E>{
 
@@ -67,31 +68,6 @@ public E takeUninterruptible(){
 public E take() throws InterruptedException{
 	return buf.take();
 }
-
-///**
-// Blocking take with random access.
-//
-// This method allows to access a specific element of the buffer. This can be for example be used to implement a primitive concurrent hashmap.
-//
-// @param index the index of the element to access
-// @return the element at index \a index of the storing array
-// @throws InterruptedException if the calling thread is interrupted, while it waits for a new element */
-//public Object remove(int index) throws InterruptedException{
-//	Object o;
-//	synchronized(buf){
-//		while(true){
-//			if(read < 0)
-//				throw new IllegalStateException(disabledMsg);
-//			if(buf[index] != null)
-//				break;
-//			buf.wait();
-//		}
-//		o = buf[index];
-//		buf[index] = null;
-//		buf.notifyAll();
-//	}
-//	return o;
-//}
 
 /**
  Uninterruptible blocking put.

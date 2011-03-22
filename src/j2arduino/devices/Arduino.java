@@ -8,9 +8,9 @@ import java.io.*;
 import java.util.*;
 
 /**
- Represents one remote device. After {@link #connect(java.util.Hashtable) connecting} various methods to send data or "call" methods are available.
- To listen for link activity {@link #addActivityListener(j2arduino.ArduinoActivityListener)} provides the option to put {@link
-j2arduino.ArduinoActivityListener}s. All methods are thread-safe if not noted otherwise.
+ Represents one remote device. After {@link #connect connecting} various methods to send data or "call" methods are available. To listen for link
+ activity {@link #addActivityListener(j2arduino.ArduinoActivityListener)} provides the option to put {@link j2arduino.ArduinoActivityListener}s. All
+ methods are thread-safe if not noted otherwise.
 
  @see j2arduino */
 public abstract class Arduino{
@@ -45,9 +45,15 @@ public static final int A2J_MAX_PAYLOAD = 255;
 public static final int A2J_MANY_HEADER = 6;
 /** Maximum number of bytes to be transmitted as payload in a2jMany packets. */
 public static final int A2J_MANY_PAYLOAD = A2J_MAX_PAYLOAD - A2J_MANY_HEADER;
+/** The number of bytes to be buffered by the input and output streams connected to the underlying stream. */
 public static final int BUFFER_SIZE = 300;
 //@}
 
+/**
+ Creates a new Arduino object. Usually called by {@link j2arduino.ArduinoGateway}.
+
+ @param name    a String used in GUIs to identify this Arduino
+ @param address a String representation if the Arduino's hardware address. */
 public Arduino(String name, String address){
 	props = null;
 	connected = (byte)0;
