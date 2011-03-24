@@ -30,7 +30,11 @@ private ArduinoGateway() throws IOException{
 		throw new FileNotFoundException("Could not load j2arduino's properties file: " + PROPERTIES_FILE);
 
 	Properties props = new Properties();
-	props.load(stream);
+	try{
+		props.load(stream);
+	} finally{
+		stream.close();
+	}
 
 	final String s = props.getProperty("kinds");
 	if(s == null){
@@ -48,7 +52,7 @@ private ArduinoGateway() throws IOException{
 				ArduinoKind kind = (ArduinoKind)c.newInstance();
 				if(kind.isAvailable()){
 					kinds.add(kind);
-					System.out.println("Loaded " + c + " successfully and it seems functional.");
+					System.err.println("Loaded " + c + " successfully and it seems functional.");
 				}
 			}
 		} catch(ClassNotFoundException e){
