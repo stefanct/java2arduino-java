@@ -407,59 +407,30 @@ public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
 }
 
 /**
- Receives a large block of data from the device represented by this instance. Uses the scheme described \ref j2amanydetails "here" to query
- CMD_P_MANY-compatible method \a funcName for data.
-
- @param funcName the CMD_P_MANY-compatible method to be "called".
- @return A byte array consisting of: all small blocks in the order received, or the return value of \a funcName if it is non-null.
- @throws java.io.IOException  if an error occurred while sending, receiving or processing on the remote device.
- @throws InterruptedException if the calling thread is interrupted while waiting for space in the sender queue or for a timeout. */
-public byte[] receiveLongByName(String funcName) throws IOException, InterruptedException{
-	byte funcOff = funcMapping.get(funcName);
-	if(funcOff < 0)
-		throw new IllegalArgumentException("Function name not in mapping");
-
-	byte[] payload = new byte[A2J_MANY_HEADER];
-	payload[0] = funcOff;
-	byte[] msg;
-	int offset = 0;
-	ByteVector tmp = new ByteVector(1024);
-	do{
-		ArduinoPacket.writeUnsignedInteger(offset, payload, 2, 4);
-		ArduinoPacket ans = sendSyncByName("a2jMany", payload);
-		if(ans.cmd != 0) // a2jMany return value
-			throw new IOException("Error in a2jMany");
-		msg = ans.msg;
-		if(msg[0] != 0) // user function's return value
-			return new byte[] {msg[0]};
-		tmp.append(msg, A2J_MANY_HEADER);
-		offset = tmp.length();
-	} while(msg[1] == 0); // a2jMany isLast
-	return tmp.getAll();
-}
-
-/**
  Sends a large payload to the device represented by this instance. Uses the scheme described \ref j2amanydetails "here" to split up \a payload into
- smaller blocks and "call" method \a "funcName" on the Arduino.
+ smaller blocks and "call" method \a "funcName" on the Arduino. This method returns when the whole payload data was sent and a reply indicating \a
+ isLast is received.
 
  @param funcName the CMD_P_MANY-compatible method to be "called".
  @param payload  the data to be sent.
- @return if \a funcName returns a non-null value before the last chunk this value is negated and returned, else the last return value of \a funcName
- is returned.
+ @return An ArduinoPacket with the {@link ArduinoPacket#cmd cmd field} set to the return value of the last invocation of \a "funcName" and the
+ {@link ArduinoPacket#msg msg field} populated with the received payloads.
  @throws java.io.IOException  if an error occurred while sending, receiving or processing on the remote device.
  @throws InterruptedException if the calling thread is interrupted while waiting for space in the sender queue or for the timeout. */
-public int sendLongByName(String funcName, byte[] payload) throws IOException, InterruptedException{
+public ArduinoPacket sendLongByName(String funcName, byte[] payload) throws IOException, InterruptedException{
 	byte funcOff = funcMapping.get(funcName);
 	if(funcOff < 0)
 		throw new IllegalArgumentException("Function name not in mapping");
 
-	int payOff = 0;
-	byte last = 0;
+	int sendOff = 0;
+	int rcvOff = 0;
+	byte sendLast = 0;
 	int todo = payload.length;
+	ByteVector replies = new ByteVector(512);
 	while(true){
 		int curLen;
 		if(todo <= A2J_MANY_PAYLOAD){
-			last = (byte)1;
+			sendLast = (byte)1;
 			curLen = todo;
 		} else{
 			curLen = A2J_MANY_PAYLOAD;
@@ -467,18 +438,25 @@ public int sendLongByName(String funcName, byte[] payload) throws IOException, I
 
 		byte[] curPayload = new byte[curLen + A2J_MANY_HEADER];
 		curPayload[0] = funcOff;
-		curPayload[1] = last;
-		ArduinoPacket.writeUnsignedInteger(payOff, curPayload, 2, 4);
-		System.arraycopy(payload, payOff, curPayload, A2J_MANY_HEADER, curLen);
+		curPayload[1] = sendLast;
+		ArduinoPacket.writeUnsignedInteger(sendOff, curPayload, 2, 4);
+		System.arraycopy(payload, sendOff, curPayload, A2J_MANY_HEADER, curLen);
+		sendOff += curLen;
+		todo -= curLen;
+
 		ArduinoPacket ans = sendSyncByName("a2jMany", curPayload);
+
 		if(ans.cmd != 0)
 			throw new IOException("Error in a2jMany");
-		if(last == 1)
-			return ans.msg[0];
-		if(ans.msg[0] != 0)
-			return -ans.msg[0];
-		payOff += curLen;
-		todo -= curLen;
+		final byte[] rcvBytes = ans.msg;
+		rcvOff = ArduinoPacket.readUnsignedInteger(rcvBytes, 2, 4);
+		// todo: use rcvOff
+		replies.append(rcvBytes, A2J_MANY_HEADER);
+		if(sendLast == 1 && rcvBytes[1] == 1){
+			ans.msg = replies.getAll();
+			ans.cmd = rcvBytes[0];
+			return ans;
+		}
 	}
 }
 //@}
