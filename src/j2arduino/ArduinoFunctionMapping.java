@@ -100,7 +100,6 @@ public void fetch(Arduino arduino, int timeout) throws IOException, InterruptedE
 					break;
 			}
 		}
-		System.err.println("fmap: " + ht);
 	}
 }
 

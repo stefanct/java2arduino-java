@@ -15,10 +15,10 @@ import java.util.*;
  @see j2arduino */
 public abstract class Arduino{
 
-/** default timeout when calling sendSync(). 0 will block forever. */
-public static final int PACKET_TIMEOUT = 2500000;
-/** Default timeout for a connecting attempt. 0 will block forever. */
-public static final int CONNECTING_TIMEOUT = 300000;
+/** Default timeout in milliseconds when calling sendSync() et al. 0 will block forever. */
+public static final int PACKET_TIMEOUT = 2500;
+/** Default timeout in milliseconds  for a connecting attempt. 0 will block forever. */
+public static final int CONNECTING_TIMEOUT = 3000;
 /**
  An unique identifier for the hardware device represented by this object. Usually a string representation of the hardware address of the associated
  device.
@@ -121,7 +121,6 @@ public boolean connect(Hashtable functionMapping) throws IOException, Interrupte
 	}
 	int tries = 1;
 	while(true){
-		System.err.println(2 - tries + ". try");
 		long startTime = System.currentTimeMillis();
 		IOException e = null;
 		InterruptedException ie = null;

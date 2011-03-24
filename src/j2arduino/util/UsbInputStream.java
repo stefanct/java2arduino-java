@@ -3,13 +3,10 @@ package j2arduino.util;
 import javax.usb.*;
 import javax.usb.util.DefaultUsbIrp;
 import java.io.*;
-import java.util.Arrays;
-
-import static sun.security.pkcs11.wrapper.Functions.toHexString;
 
 public class UsbInputStream extends InputStream{
 
-protected final UsbPipe in;
+private final UsbPipe in;
 private final byte[] buffer;
 /** Index of the first buffered byte.*/
 private int start;
@@ -28,15 +25,10 @@ public int read() throws IOException{
 	try{
 		while(start > end){
 			UsbIrp irp = new DefaultUsbIrp(buffer, 0, buffer.length, true);
-			System.err.println("calling pipe.syncSubmit " + irp);
 			in.syncSubmit(irp);
 			start = 0;
 			int actLen = irp.getActualLength();
 			end = actLen - 1;
-			if(actLen > 0)
-				System.err.println(toHexString(Arrays.copyOfRange(buffer, 0, actLen)) + " buffered in UsbInputStream");
-			else
-				System.err.println("emtpy IRP returned");
 		}
 		return buffer[start++];
 

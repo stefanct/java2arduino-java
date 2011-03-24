@@ -19,7 +19,7 @@ public class ConcurrentRingBuffer<E>{
 
 private final BlockingQueue<E> buf;
 private boolean enabled;
-private String disabledMsg;
+private final String disabledMsg;
 
 /** Creates a new ring buffer with 8 elements and a default disabled message. */
 public ConcurrentRingBuffer(){

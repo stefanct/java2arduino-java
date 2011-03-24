@@ -53,7 +53,6 @@ private ArduinoGateway() throws IOException{
 			}
 		} catch(ClassNotFoundException e){
 			System.err.println("Could not find a class named: " + className);
-			System.err.println("Check the properties file!");
 		} catch(InstantiationException e){
 			System.err.println("Could not instantiate a class named: " + className);
 			System.err.println("This means it is not an instantiable Class or it has no nullary constructor.");
