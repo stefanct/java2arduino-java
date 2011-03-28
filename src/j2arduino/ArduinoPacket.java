@@ -11,6 +11,7 @@ import java.io.PrintStream;
  An ArduinoPacket may represent a request (e.g. when a {@link j2arduino} client calls {@link j2arduino.devices.Arduino#sendSync(ArduinoPacket)}) or a
  reply. It can also be used to propagate communication errors inside its {@link #ex} field.
  */
+@SuppressWarnings( {"PublicField"})
 public class ArduinoPacket{
 
 /** Request: function offset, answer: return value, error: probably return value. */

@@ -11,7 +11,7 @@ public interface ArduinoKind{
  Tries to load the subsystem necessary for this kind of underlying protocol and reports its availability.
 
  @return true if the subsystem is available and seems to be functional. */
-public abstract boolean isAvailable();
+boolean isAvailable();
 
 /**
  Returns all available Arduinos for this kind.
@@ -20,5 +20,5 @@ public abstract boolean isAvailable();
 
  @param updateNow if true the set must be updated before returning it.
  @return a set including all currently known Arduinos usable via the underlying protocol of this kind. */
-public abstract HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException, UsbException;
+HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException, UsbException;
 }

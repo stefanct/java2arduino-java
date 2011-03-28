@@ -7,7 +7,7 @@ import javax.usb.UsbException;
 import java.io.*;
 import java.util.*;
 
-/** Serves as gateway between java and the c code on the Atmega. */
+/** Serves as gateway between java and the c code on the microcontroller. */
 public class ArduinoGateway implements ArduinoActivityListener{
 
 private final HashMap<String, Arduino> arduinos = new HashMap<String, Arduino>(1);
@@ -86,8 +86,9 @@ synchronized public static ArduinoGateway getInstance() throws IOException{
 
 /**
  Returns available Arduinos.
-
- This will start a discovery process on all available kinds of busses using {@link j2arduino.devices.ArduinoKind#getAvailableArduinos(boolean)}. Each
+ <p/>
+ This will start a discovery process on all available kinds of busses using {@link j2arduino.devices.ArduinoKind#getAvailableArduinos(boolean)}.
+ Each
  kind decides if an evaluated device is usable by different characteristics (i.e. usually constant fields provided by the underlying protocols).
 
  @param updateNow forces a search for new devices and invalidates the cache of known Arduinos.
@@ -130,7 +131,7 @@ public Arduino get(String address){
 
 /**
  Attaches an ArduinoActivityListener to this gateway.
-
+ <p/>
  Attached listeners will be called back, whenever there is any BT activity known to this gateway. This includes device discovery as done by {@link
 #getAvailableArduinos(boolean)} as well as any BT activity done in Arduino instances managed by this gateway.
 
@@ -162,7 +163,7 @@ private void fireActivityListeners(int newState, Arduino arduino){
 
 /**
  Adds an Arduino to the gateway's database.
-
+ <p/>
  This can be used to preset Arduinos (e.g. to speed up user interaction, when remote devices are known and discovery can be skipped).
 
  @param arduino the arduino to be added */

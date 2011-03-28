@@ -38,7 +38,7 @@ public ArduinoFunctionMapping(Hashtable mapping){
 	if(mapping != null){
 		int size = mapping.size();
 		if(size > 256)
-			throw new IllegalArgumentException("ArduinoFunctionMapping does not allow more than 256 entries!");
+			throw new IllegalArgumentException("ArduinoFunctionMapping does not allow more than 256 entries");
 
 		// we could take 'mapping' as our ht but it should not be accessible directly from outside -> copy contents
 		Iterator iterator = mapping.keySet().iterator();

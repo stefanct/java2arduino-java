@@ -257,7 +257,7 @@ private void fireActivityListeners(int newState){
  @throws IllegalStateException    if not connected. */
 public void verifyRequest(ArduinoPacket req) throws IllegalArgumentException, IllegalStateException{
 	if(connected == 0)
-		throw new IllegalStateException();
+		throw new IllegalStateException("Not connected");
 	if(req.cmd < 0 || req.cmd > 255 || ((req.msg != null) && (req.msg.length < 0 || req.msg.length > A2J_MAX_PAYLOAD))){
 		req.print();
 		throw new IllegalArgumentException("Malformed ArduinoPacket");
