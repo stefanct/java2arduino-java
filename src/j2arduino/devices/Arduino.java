@@ -166,7 +166,7 @@ protected abstract OutputStream openOutputStream() throws UsbException, IOExcept
 
 protected abstract InputStream openInputStream() throws UsbException, IOException;
 
-protected abstract void closeStreams();
+protected abstract void releaseResources();
 
 /** Stops the working thread, tears down the connection, notifies all listeners. \ingroup arduinoConnection */
 public void disconnect(){
@@ -191,10 +191,6 @@ public void disconnect(){
 			worker = null;
 		}
 	}
-	closeStreams();
-	funcMapping.clear();
-	props.clear();
-	fireActivityListeners(ArduinoActivityListener.STATE_DISCONNECTED);
 }
 
 /**
@@ -610,6 +606,18 @@ private class ArduinoWorker implements Runnable{
 				fireActivityListeners(ArduinoActivityListener.STATE_INACTIVE);
 			}
 		}
+
+		try{
+			in.close();
+		} catch(IOException ignored){
+		}
+		try{
+			out.close();
+		} catch(IOException ignored){
+		}
+		releaseResources();
+		funcMapping.clear();
+		props.clear();
 		synchronized(sendQueue){
 			sendQueue.setEnabled(false);
 			Iterator<ArduinoPacket> it = sendQueue.iterator();
@@ -624,14 +632,7 @@ private class ArduinoWorker implements Runnable{
 				}
 			}
 		}
-		try{
-			in.close();
-		} catch(IOException ignored){
-		}
-		try{
-			out.close();
-		} catch(IOException ignored){
-		}
+		fireActivityListeners(ArduinoActivityListener.STATE_DISCONNECTED);
 	}
 
 	/**

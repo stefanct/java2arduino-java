@@ -47,10 +47,8 @@ protected InputStream openInputStream() throws UsbException{
 }
 
 @Override
-protected void closeStreams(){
+protected void releaseResources(){
 	try{
-		usbIF.getUsbEndpoint(USB_IN_EPNUM).getUsbPipe().close();
-		usbIF.getUsbEndpoint(USB_OUT_EPNUM).getUsbPipe().close();
 		usbIF.release();
 	} catch(UsbException ignored){
 	}

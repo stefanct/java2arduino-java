@@ -33,4 +33,13 @@ public void write(int i) throws IOException{
 		throw new IOException("Sending to an UsbPipe failed", e);
 	}
 }
+
+@Override
+public void close() throws IOException{
+	try{
+		out.close();
+	} catch(UsbException e){
+		throw new IOException("Error closing the underlying UsbPipe", e);
+	}
+}
 }

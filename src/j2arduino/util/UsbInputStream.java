@@ -67,4 +67,13 @@ public int read(byte[] b, int off, int len) throws IOException{
 public int available(){
 	return end - start + 1;
 }
+
+@Override
+public void close() throws IOException{
+	try{
+		in.close();
+	} catch(UsbException e){
+		throw new IOException("Error closing the underlying UsbPipe", e);
+	}
+}
 }

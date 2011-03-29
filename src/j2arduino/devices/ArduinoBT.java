@@ -21,7 +21,7 @@ protected InputStream openInputStream() throws UsbException, IOException{
 }
 
 @Override
-protected void closeStreams(){
+protected void releaseResources(){
 }
 
 @Override
