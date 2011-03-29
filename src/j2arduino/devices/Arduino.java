@@ -382,8 +382,7 @@ public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
 	synchronized(req){
 		req.cmd = req.cmd + ArduinoPacket.PROCESSING; // 0-FF -> 100-1FF to distinguish processed from not processed packets later
 		requests.put(req);
-		long t = System.currentTimeMillis();
-		long endTime = t + milliseconds;
+		long endTime = System.currentTimeMillis() + milliseconds;
 		while(true){
 			req.wait(milliseconds);
 			IOException ex = req.ex;
@@ -394,7 +393,8 @@ public ArduinoPacket sendSyncWait(ArduinoPacket req, long milliseconds)
 				return req;
 			if(endTime <= curTime && req.cmd >= ArduinoPacket.PROCESSING){ // packet should be done now but is not
 				workerThread.interrupt();
-				throw new TimeoutException("Processing the request took too long");
+				req.wait();
+				throw new TimeoutException("Processing the request took too long", req.ex);
 			} else{ // must be spurious interrupt
 				if(milliseconds != 0 && endTime - curTime != 0) // 0 is special
 					milliseconds = endTime - curTime;
