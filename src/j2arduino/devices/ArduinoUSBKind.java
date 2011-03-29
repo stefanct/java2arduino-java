@@ -77,9 +77,10 @@ private void addAttachedUsbDevices(UsbHub usbHub) throws UsbException, Unsupport
 						   && usbIfDesc.bInterfaceProtocol() == USB_IF_PROTOCOL
 						   && usbIf.containsUsbEndpoint(ArduinoUSB.USB_IN_EPNUM)
 						   && usbIf.containsUsbEndpoint(ArduinoUSB.USB_OUT_EPNUM)){
-							String address = "USB-" + dev.getSerialNumberString() + UUID.randomUUID();
+							final String serialNumberString = dev.getSerialNumberString();
+							final String id = ((serialNumberString.isEmpty()) ? UUID.randomUUID().toString() : serialNumberString);
 							synchronized(arduinos){
-								Arduino arduino = new ArduinoUSB(address, dev.getProductString() + '-' + dev.getSerialNumberString(), usbIf);
+								Arduino arduino = new ArduinoUSB("USB-" + id, dev.getProductString() + '-' + serialNumberString, usbIf);
 								arduinos.add(arduino);
 							}
 						}
