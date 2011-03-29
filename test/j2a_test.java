@@ -7,8 +7,6 @@ import java.util.*;
 
 public class j2a_test{
 
-static final String lineSeparator = System.getProperty("line.separator");
-
 private j2a_test(){
 }
 
@@ -24,17 +22,17 @@ static public void main(String[] args) throws IOException{
 		try{
 			a.connect(null);
 			int[] ints = stresstestEcho(a);
-			System.out.format("stresstest a2jEcho %5s (%dB of %dB came back correctly)%s",
+			System.out.format("stresstest a2jEcho %5s (%dB of %dB came back correctly)%n",
 			                  ints[1] == 0 ? "OK" : "FAILED",
 			                  ints[0],
-			                  ints[0] + ints[1],
-			                  lineSeparator);
-			ints = stresstestEchoMany(a);
-			System.out.format("stresstest a2jEchoMany %5s (%dB of %dB came back correctly)%s",
+			                  ints[0] + ints[1]);
+			final int maxPayload = Arduino.A2J_MAX_PAYLOAD * 1000;
+			final int maxPayloadPlaces = (int)Math.ceil(Math.log10(maxPayload)) + 1;
+			ints = stresstestEchoMany(a, maxPayload, maxPayloadPlaces);
+			System.out.format("stresstest a2jEchoMany %" + maxPayloadPlaces + "s (%dB of %dB came back correctly)%n",
 			                  ints[1] == 0 ? "OK" : "FAILED",
 			                  ints[0],
-			                  ints[0] + ints[1],
-			                  lineSeparator);
+			                  ints[0] + ints[1]);
 
 		} catch(Exception e){
 			e.printStackTrace();
@@ -50,7 +48,7 @@ static public void main(String[] args) throws IOException{
 }
 
 private static int[] stresstestEcho(Arduino a) throws InterruptedException{
-	int i = 100;
+	int i = 2;
 	int ok = 0;
 	int failed = 0;
 	Random rand = new Random(0);
@@ -59,10 +57,10 @@ private static int[] stresstestEcho(Arduino a) throws InterruptedException{
 		byte[] payload = new byte[len];
 		rand.nextBytes(payload);
 
-		System.err.format("sending normal payload (%3dB): %s%s", len, toHexString(payload), lineSeparator);
+		System.err.format("sending normal payload (%3dB): %s%n", len, toHexString(payload));
 		try{
 			final byte[] ans = a.sendSyncByName("a2jEcho", payload).msg;
-			System.err.format("received               (%3dB): %s%s", ans.length, toHexString(ans), lineSeparator);
+			System.err.format("received               (%3dB): %s%n", ans.length, toHexString(ans));
 			if(!Arrays.equals(ans, payload)){
 				System.err.println("FAILED");
 				int payloadLength = payload.length;
@@ -84,19 +82,19 @@ private static int[] stresstestEcho(Arduino a) throws InterruptedException{
 	return new int[] {ok, failed};
 }
 
-private static int[] stresstestEchoMany(Arduino a) throws InterruptedException{
-	int i = 100;
+private static int[] stresstestEchoMany(Arduino a, final int maxPayload, final int maxPayloadPlaces) throws InterruptedException{
+	int i = 50;
 	int ok = 0;
 	int failed = 0;
 	Random rand = new Random(0);
 	while(i-- > 0){
-		int len = rand.nextInt(Arduino.A2J_MAX_PAYLOAD * 10);
+		int len = rand.nextInt(maxPayload);
 		byte[] payload = new byte[len];
 		rand.nextBytes(payload);
-		System.err.printf("sending long payload (%5dB): %s%s", len, toHexString(payload), lineSeparator);
+		System.err.format("sending long payload (%" + maxPayloadPlaces + "dB): %s%n", len, toHexString(payload));
 		try{
 			final byte[] ans = a.sendLongByName("a2jEchoMany", payload).msg;
-			System.err.format("received             (%5dB): %s%s", ans.length, toHexString(ans), lineSeparator);
+			System.err.format("received             (%" + maxPayloadPlaces + "dB): %s%n", ans.length, toHexString(ans));
 			if(!Arrays.equals(ans, payload)){
 				int payloadLength = payload.length;
 				int j = 0;
