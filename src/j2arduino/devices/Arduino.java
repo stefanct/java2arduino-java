@@ -15,6 +15,7 @@ import java.util.*;
  @see j2arduino */
 public abstract class Arduino{
 
+// TODO: make those configurable
 /** Default timeout in milliseconds when calling sendSync() et al. 0 will block forever. */
 public static final int PACKET_TIMEOUT = 2500;
 /** Default timeout in milliseconds  for a connecting attempt. 0 will block forever. */

@@ -2,9 +2,10 @@ package j2arduino;
 
 import j2arduino.devices.Arduino;
 import j2arduino.devices.ArduinoKind;
+import j2arduino.util.J2ArduinoSettings;
 
 import javax.usb.UsbException;
-import java.io.*;
+import java.io.IOException;
 import java.util.*;
 
 /** Serves as gateway between java and the c code on the microcontroller. */
@@ -16,57 +17,67 @@ private final Object discoveryLock = new Object();
 /** Stores kinds of arduinos which are currently enabled and available (according to their {@link j2arduino.devices.ArduinoKind#isAvailable()} method. */
 private final ArduinoKind[] availableKinds;
 
-/** Name of the properties file where different settings like selected kinds are stored. */
-public static final String PROPERTIES_FILE = "j2arduino.properties";
-
 // singleton stuff
 //@{
 private static ArduinoGateway gateway = null;
+public static final String J2ARDUINO_KINDS = "j2arduino.kinds";
 
 /** This constructor should only be called from within getInstance or subclasses. */
 private ArduinoGateway() throws IOException{
-	final InputStream stream = getClass().getClassLoader().getResourceAsStream(PROPERTIES_FILE);
-	if(stream == null)
-		throw new FileNotFoundException("Could not load j2arduino's properties file: " + PROPERTIES_FILE);
-
-	Properties props = new Properties();
-	try{
-		props.load(stream);
-	} finally{
-		stream.close();
-	}
-
-	final String s = props.getProperty("kinds");
+	final String s = J2ArduinoSettings.getSetting(J2ARDUINO_KINDS);
 	if(s == null){
 		availableKinds = new ArduinoKind[0];
+		System.err.println("There were no Arduino kinds specified. This is probably wrong.");
 		return;
 	}
 
-	String[] providers = s.replaceAll(" ", "").split(",");
+	String[] providers = s.split("[\\s,]+");
 	List<ArduinoKind> kinds = new LinkedList<ArduinoKind>();
 	for(String p : providers){
-		String className = "j2arduino.devices.Arduino" + p + "Kind";
-		try{
-			Class c = Class.forName(className);
-			if(ArduinoKind.class.isAssignableFrom(c)){
-				ArduinoKind kind = (ArduinoKind)c.newInstance();
-				if(kind.isAvailable()){
-					kinds.add(kind);
-					System.err.println("Loaded " + c + " successfully and it seems functional.");
-				}
+		if(p.isEmpty())
+			continue;
+		int i = 0;
+	 loop:
+		while(true){
+			String className;
+			switch(i++){
+				case 0:
+					className = "j2arduino.devices.Arduino" + p + "Kind";
+					break;
+				case 1:
+					className = "j2arduino.devices.Arduino" + p.toUpperCase() + "Kind";
+					break;
+				case 2:
+					className = "j2arduino.devices.Arduino" + p.toLowerCase() + "Kind";
+					break;
+				default:
+					break loop;
 			}
-		} catch(ClassNotFoundException e){
-			System.err.println("Could not find a class named: " + className);
-		} catch(InstantiationException e){
-			System.err.println("Could not instantiate a class named: " + className);
-			System.err.println("This means it is not an instantiable Class or it has no nullary constructor.");
-			System.err.println("Please report this to the author of " + className + '!');
-			e.printStackTrace();
-		} catch(IllegalAccessException e){
-			System.err.println("Could not instantiate a class named: " + className);
-			System.err.println("This means we don't have access to its constructor.");
-			System.err.println("Please report this to the author of " + className + '!');
-			e.printStackTrace();
+			try{
+				Class c = Class.forName(className);
+				if(ArduinoKind.class.isAssignableFrom(c)){
+					ArduinoKind kind = (ArduinoKind)c.newInstance();
+					System.err.print("Loaded " + c + " successfully ");
+					if(kind.isAvailable()){
+						kinds.add(kind);
+						System.err.println("and it seems functional.");
+					} else
+						System.err.println("but it seems NOT to be functional.");
+					break loop;
+				}
+			} catch(ClassNotFoundException e){
+				System.err.println("Could not find a class named: " + className);
+			} catch(InstantiationException e){
+				System.err.println("Could not instantiate a class named: " + className);
+				System.err.println("This means it is not an instantiable Class or it has no nullary constructor.");
+				System.err.println("Please report this to the author of " + className + '!');
+				e.printStackTrace();
+			} catch(IllegalAccessException e){
+				System.err.println("Could not instantiate a class named: " + className);
+				System.err.println("This means we don't have access to its constructor.");
+				System.err.println("Please report this to the author of " + className + '!');
+				e.printStackTrace();
+			}
 		}
 	}
 	availableKinds = kinds.toArray(new ArduinoKind[kinds.size()]);

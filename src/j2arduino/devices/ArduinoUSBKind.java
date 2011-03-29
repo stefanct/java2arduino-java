@@ -1,8 +1,9 @@
 package j2arduino.devices;
 
+import j2arduino.util.J2ArduinoSettings;
+
 import javax.usb.*;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.*;
 
 public class ArduinoUSBKind implements ArduinoKind{
@@ -13,6 +14,7 @@ public static final String USB_PROD = "USB Board";
 public static final byte USB_IF_CLASS = (byte)0xFF;
 public static final byte USB_IF_SUBCLASS = (byte)0x12;
 public static final byte USB_IF_PROTOCOL = (byte)0xEF;
+public static final String JAVAX_USB_PROPERTIES_FILE = "javax.usb.properties";
 public static final String JAVAX_USB_SERVICES_NAME = "javax.usb.services";
 public static final String JAVAX_USB_SERVICES_VALUE = "javalibusb1.Libusb1UsbServices";
 public static final String JAVAX_USB_LIBUSB_TRACE_NAME = "javax.usb.libusb.trace";
@@ -21,6 +23,14 @@ public static final String JAVAX_USB_LIBUSB_DEBUG_NAME = "javax.usb.libusb.debug
 public static final String JAVAX_USB_LIBUSB_DEBUG_VALUE = "0";
 
 public ArduinoUSBKind(){
+	// set default settings for javax-usb-libusb1 as system properties if they are not set yet by any means
+	Properties props = J2ArduinoSettings.loadPropertiesFromFile(JAVAX_USB_PROPERTIES_FILE);
+	if(props == null || !props.containsKey(JAVAX_USB_SERVICES_NAME))
+		System.setProperty(JAVAX_USB_SERVICES_NAME, JAVAX_USB_SERVICES_VALUE);
+	if(props == null || !props.containsKey(JAVAX_USB_LIBUSB_TRACE_NAME))
+		System.setProperty(JAVAX_USB_LIBUSB_TRACE_NAME, JAVAX_USB_LIBUSB_TRACE_VALUE);
+	if(props == null || !props.containsKey(JAVAX_USB_LIBUSB_DEBUG_NAME))
+		System.setProperty(JAVAX_USB_LIBUSB_DEBUG_NAME, JAVAX_USB_LIBUSB_DEBUG_VALUE);
 }
 
 /** Tries to load Class {@link javax.usb.UsbDevice} and get a valid hub device via {@link javax.usb.UsbServices#getRootUsbHub()}. */
@@ -28,15 +38,6 @@ public ArduinoUSBKind(){
 public boolean isAvailable(){
 	try{
 		if(Class.forName("javax.usb.UsbHostManager") != null){
-			// set default settings for javax-usb-libusb1 as system properties if they are not set yet
-			Properties sysprops = System.getProperties();
-			if(!sysprops.containsKey(JAVAX_USB_SERVICES_NAME))
-				System.setProperty(JAVAX_USB_SERVICES_NAME, JAVAX_USB_SERVICES_VALUE);
-			if(!sysprops.containsKey(JAVAX_USB_LIBUSB_TRACE_NAME))
-				System.setProperty(JAVAX_USB_LIBUSB_TRACE_NAME, JAVAX_USB_LIBUSB_TRACE_VALUE);
-			if(!sysprops.containsKey(JAVAX_USB_LIBUSB_DEBUG_NAME))
-				System.setProperty(JAVAX_USB_LIBUSB_DEBUG_NAME, JAVAX_USB_LIBUSB_DEBUG_VALUE);
-
 			if(UsbHostManager.getUsbServices().getRootUsbHub() != null)
 				return true;
 		}
