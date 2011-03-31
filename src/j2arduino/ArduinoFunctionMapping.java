@@ -3,12 +3,11 @@ package j2arduino;
 import j2arduino.devices.Arduino;
 
 import java.io.IOException;
-import java.util.Hashtable;
-import java.util.Iterator;
+import java.util.*;
 
 /**
  Represents a mapping between function names that can be called on remote Arduinos and their offsets.
-
+ <p/>
  If enabled at the remote device and not overridden by a constant default, a mapping between (the string representation of) the callable
  functions and their offset in a function pointer array (located at the device) will be read upon connecting to it.
  */
@@ -29,7 +28,7 @@ protected ArduinoFunctionMapping(){
 
 /**
  Creates a mapping.
-
+ <p/>
  If mapping is not null, it represents a fixed mapping used in the whole live of this object. Fetching remote mappings will be disabled. If mapping
  is null, an empty mapping is created, which can be populated later by calling {@link #fetch}.
 

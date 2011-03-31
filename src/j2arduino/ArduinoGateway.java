@@ -1,7 +1,6 @@
 package j2arduino;
 
-import j2arduino.devices.Arduino;
-import j2arduino.devices.ArduinoKind;
+import j2arduino.devices.*;
 import j2arduino.util.J2ArduinoSettings;
 
 import java.io.IOException;

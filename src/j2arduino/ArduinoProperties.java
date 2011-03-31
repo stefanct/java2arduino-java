@@ -7,7 +7,7 @@ import java.util.Hashtable;
 
 /**
  ArduinoProperties are pairs of strings, that represent properties of remote Arduinos.
-
+ <p/>
  If enabled on the remote device, this class can provide these pairs in the form of a mapping of option keys to option values.
  */
 public class ArduinoProperties{

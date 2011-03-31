@@ -8,9 +8,9 @@ public class UsbInputStream extends InputStream{
 
 private final UsbPipe in;
 private final byte[] buffer;
-/** Index of the first buffered byte.*/
+/** Index of the first buffered byte. */
 private int start;
-/** Index of the last buffered byte.*/
+/** Index of the last buffered byte. */
 private int end;
 
 public UsbInputStream(UsbPipe inPipe){
@@ -68,6 +68,7 @@ public int available(){
 	return end - start + 1;
 }
 
+// TODO: introduce a boolean value to reflect this and throw exceptions in methods when used while this stream is closed
 @Override
 public void close() throws IOException{
 	try{

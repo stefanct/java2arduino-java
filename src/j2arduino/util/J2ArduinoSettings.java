@@ -1,7 +1,6 @@
 package j2arduino.util;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Properties;
 
 public class J2ArduinoSettings{

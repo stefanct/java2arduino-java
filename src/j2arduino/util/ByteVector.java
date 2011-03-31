@@ -54,7 +54,7 @@ public ByteVector append(byte[] bytes){
 
 /**
  Appends a part of an array.
-
+ <p/>
  Appends the contents of array bytes to this array, starting and including offset 'offset'.
 
  @param bytes  the array to be appended
@@ -66,7 +66,7 @@ public ByteVector append(byte[] bytes, int offset){
 
 /**
  Appends a part of an array.
-
+ <p/>
  Appends the contents of array bytes to this array, starting and including offset \a offset ending after \a length elements.
 
  @param bytes  the array to be appended
@@ -99,7 +99,7 @@ public byte get(int index){
 
 /**
  Returns all bytes in this buffer.
-
+ <p/>
  The returned array contains copies of the bytes previously added to this buffer.
 
  @return an array of bytes in this buffer. */
@@ -111,7 +111,7 @@ public byte[] getAll(){
 
 /**
  Ensures, that the storing array can hold at least \a minimumCapacity bytes.
-
+ <p/>
  Allocates a new array (\a inc elements larger or double the current size if \a inc is not set) and copies the content of the old array over to the
  new one.
 

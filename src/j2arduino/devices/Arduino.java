@@ -69,7 +69,7 @@ public Arduino(String name, String address){
 /**
  Arduinos are uniquely identified by their addresses. Whoever instantiates objects of this type is responsible for providing system-wide unique
  identifiers. If the underlying protocol does not provide such identifiers they must be generated.
-
+ <p/>
  Two Arduinos are equal if their addresses are equal.
  */
 @Override
@@ -89,10 +89,11 @@ public int hashCode(){
 /** \defgroup arduinoConnection Arduino methods (connection related) */
 /**
  Creates a new connection.
-
- Creates a connection including a working thread, function mapping and properties. If a (non-null) Hashtable is provided, it will be used as constant
+ <p/>
+ Creates a connection including a working thread, function mapping and properties. If a (non-null) Hashtable is provided, it will be used as
+ constant
  function mapping, else the Arduino will be queried for it.
-
+ <p/>
  \ingroup arduinoConnection
 
  @param functionMapping a constant function mapping (may be null).
@@ -195,7 +196,7 @@ public void disconnect(){
 
 /**
  Returns if the Arduino represented by this instance is connected or not.
-
+ <p/>
  \ingroup arduinoConnection
 
  @return true if the Arduino is fully connected, false if it is disconnected or a connection attempt is in progress. */
@@ -502,7 +503,8 @@ private class ArduinoWorker implements Runnable{
 	}
 
 	/**
-	 Tells this instance to exit before the next write/read iteration. If there is an immediate exit required, one has to interrupt the executing thread
+	 Tells this instance to exit before the next write/read iteration. If there is an immediate exit required, one has to interrupt the executing
+	 thread
 	 afterwards.
 	 */
 	private void shutdown(){
@@ -637,7 +639,7 @@ private class ArduinoWorker implements Runnable{
 
 	/**
 	 Notifies all listeners of an ArduinoPacket that the processing finished.
-
+	 <p/>
 	 If set the explicit listener of ArduinoPacket \a req will be called back to handle the answer and all threads, that synchronize on \a req will be
 	 notified.
 
@@ -654,7 +656,7 @@ private class ArduinoWorker implements Runnable{
 
 	/**
 	 Writes a byte to the OutputStream.
-
+	 <p/>
 	 If the given argument has to be escaped, it writes #A2J_ESC first and then \a data-1. @see a2jframing
 
 	 @param data the byte to write
@@ -671,7 +673,7 @@ private class ArduinoWorker implements Runnable{
 
 	/**
 	 Reads one byte from the InputStream.
-
+	 <p/>
 	 Tries to read a byte from the InputStream with a timeout of #READ_TIMEOUT ms. If that byte indicates escaping, another byte is read and returned
 	 after it has been incremented.
 

@@ -2,13 +2,13 @@ package j2arduino;
 
 import j2arduino.devices.Arduino;
 
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 
 /**
  ArduinoPackets are used as lightweight data exchange objects in {@link j2arduino} and while communicating with its clients.
-
- An ArduinoPacket may represent a request (e.g. when a {@link j2arduino} client calls {@link j2arduino.devices.Arduino#sendSync(ArduinoPacket)}) or a
+ <p/>
+ An ArduinoPacket may represent a request (e.g. when a {@link j2arduino} client calls {@link j2arduino.devices.Arduino#sendSync(ArduinoPacket)}) or
+ a
  reply. It can also be used to propagate communication errors inside its {@link #ex} field.
  */
 @SuppressWarnings( {"PublicField"})
@@ -50,7 +50,7 @@ public ArduinoPacket(byte[] payload){
 
 /**
  Creates a new ArduinoPacket and sets fields cmd, buf and listener to the given parameters.
-
+ <p/>
  \warning Changes to the elements of \a payload while the instance is used inside j2arduino can have unwanted effects.
 
  @param command the value assigned to cmd
@@ -101,10 +101,11 @@ public void print(){
 
 /**
  Helper method to extract little-endian unsigned integers from byte arrays.
-
+ <p/>
  Can be used to easily convert uint16_t et al. received from Arduinos to Java's primitive integer types.
-
- Note that input values greater than 0x7FFFFFFF will be converted to a negative \a int and that no more than four bytes will contribute to the return
+ <p/>
+ Note that input values greater than 0x7FFFFFFF will be converted to a negative \a int and that no more than four bytes will contribute to the
+ return
  value.
 
  @param source    byte array from which to read

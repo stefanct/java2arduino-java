@@ -1,20 +1,19 @@
 package j2arduino.util;
 
 import java.util.Iterator;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.*;
 
 /**
  A threadsafe ring buffer backed by a BlockingQueue.
-
+ <p/>
  Instances of this class can be used to exchange (non-null) objects between multiple producer and consumer threads. Methods for blocking,
  uninterruptible blocking and uninterruptible blocking random access are provided. Only thread safety in the sense of serialized access to critical
  sections is guaranteed, producers as well as consumers may starve, if there are multiples of them.
-
+ <p/>
  It is possible to disable adding and removing elements globally, which will raise exception if it is tried. A custom string can be set as detail
  message for those exceptions.
- * @param <E> the type of elements held in this collection
- */
+
+ @param <E> the type of elements held in this collection */
 public class ConcurrentRingBuffer<E>{
 
 private final BlockingQueue<E> buf;
@@ -47,7 +46,7 @@ public void setEnabled(boolean enabled){
 
 /**
  Uninterruptible blocking take.
-
+ <p/>
  It is not possible to interrupt this method. If the calling thread is blocked inside this method, interrupts sent to it will silently be ignored.
 
  @return an object previously added to this buffer */
@@ -71,7 +70,7 @@ public E take() throws InterruptedException{
 
 /**
  Uninterruptible blocking put.
-
+ <p/>
  It is not possible to interrupt this method. If the calling thread is blocked inside this method, interrupts sent to it will silently be ignored.
 
  @param o the object to be stored in the buffer */

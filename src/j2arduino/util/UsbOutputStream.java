@@ -1,10 +1,8 @@
 package j2arduino.util;
 
-import javax.usb.UsbException;
-import javax.usb.UsbPipe;
+import javax.usb.*;
 import javax.usb.util.DefaultUsbIrp;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 
 public class UsbOutputStream extends OutputStream{
 
@@ -34,6 +32,7 @@ public void write(int i) throws IOException{
 	}
 }
 
+// TODO: introduce a boolean value to reflect this and throw exceptions in methods when used while this stream is closed
 @Override
 public void close() throws IOException{
 	try{

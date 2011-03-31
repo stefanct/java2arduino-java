@@ -3,8 +3,7 @@ package j2arduino.util;
 import j2arduino.ArduinoPacket;
 import j2arduino.devices.Arduino;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
+import java.io.*;
 
 /** A thread that polls its counterpart #a2jDebug periodically and prints the results to stderr. */
 public class Debug extends Thread{
