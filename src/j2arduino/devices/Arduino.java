@@ -3,7 +3,6 @@ package j2arduino.devices;
 import j2arduino.*;
 import j2arduino.util.*;
 
-import javax.usb.UsbException;
 import java.io.*;
 import java.util.*;
 
@@ -100,7 +99,7 @@ public int hashCode(){
  @return true if the connection was established due to this call, false otherwise
  @throws java.io.IOException  if no connection could be established.
  @throws InterruptedException If the calling thread is interrupted before the connecting attempt succeeded */
-public boolean connect(Hashtable functionMapping) throws IOException, InterruptedException, UsbException{
+public boolean connect(Hashtable functionMapping) throws IOException, InterruptedException{
 	synchronized(this){
 		if(connected != 0)
 			return false;
@@ -163,9 +162,9 @@ protected boolean isAvailable(){
 	return false;
 }
 
-protected abstract OutputStream openOutputStream() throws UsbException, IOException;
+protected abstract OutputStream openOutputStream() throws IOException;
 
-protected abstract InputStream openInputStream() throws UsbException, IOException;
+protected abstract InputStream openInputStream() throws IOException;
 
 protected abstract void releaseResources();
 

@@ -1,7 +1,6 @@
 package j2arduino.devices;
 
 import javax.microedition.io.*;
-import javax.usb.UsbException;
 import java.io.*;
 
 public class ArduinoBT extends Arduino{
@@ -11,12 +10,12 @@ public ArduinoBT(String name, String address){
 }
 
 @Override
-protected OutputStream openOutputStream() throws UsbException, IOException{
+protected OutputStream openOutputStream() throws IOException{
 	return ((OutputConnection)Connector.open("btspp://" + address + ":1", Connector.READ_WRITE)).openOutputStream();
 }
 
 @Override
-protected InputStream openInputStream() throws UsbException, IOException{
+protected InputStream openInputStream() throws IOException{
 	return ((InputConnection)Connector.open("btspp://" + address + ":1", Connector.READ_WRITE)).openInputStream();
 }
 

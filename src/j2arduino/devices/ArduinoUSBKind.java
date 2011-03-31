@@ -48,12 +48,12 @@ public boolean isAvailable(){
 }
 
 @Override
-public HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException, UsbException{
+public HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException{
 	try{
 		UsbHub rootUsbHub = UsbHostManager.getUsbServices().getRootUsbHub();
 		addAttachedUsbDevices(rootUsbHub);
-//	} catch(SecurityException ignored){ // thrown if access to the USB subsystem is not allowed
-	} catch(UnsupportedEncodingException ignored){
+	} catch(UsbException e){
+		throw new IOException(e);
 	}
 	return arduinos;
 }

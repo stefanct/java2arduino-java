@@ -1,6 +1,5 @@
 package j2arduino.devices;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 import java.util.HashSet;
 
@@ -15,10 +14,10 @@ boolean isAvailable();
 
 /**
  Returns all available Arduinos for this kind.
-
+ <p/>
  The returned set has to be treated read-only.
 
  @param updateNow if true the set must be updated before returning it.
  @return a set including all currently known Arduinos usable via the underlying protocol of this kind. */
-HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException, UsbException;
+HashSet<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException;
 }

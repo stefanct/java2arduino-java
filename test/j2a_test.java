@@ -40,8 +40,6 @@ static public void main(String[] args) throws IOException{
 		a.disconnect();
 	} catch(InterruptedException e){
 		e.printStackTrace();
-	} catch(UsbException e){
-		e.printStackTrace();
 	} catch(IOException e){
 		e.printStackTrace();
 	}

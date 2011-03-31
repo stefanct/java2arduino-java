@@ -1,11 +1,9 @@
 package j2arduino.devices;
 
-import j2arduino.util.UsbInputStream;
-import j2arduino.util.UsbOutputStream;
+import j2arduino.util.*;
 
 import javax.usb.*;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 
 public class ArduinoUSB extends Arduino{
 
@@ -27,23 +25,31 @@ public ArduinoUSB(String address, String name, UsbInterface usbInterface){
 }
 
 @Override
-protected OutputStream openOutputStream() throws UsbException{
-	if(!usbIF.isClaimed())
-		usbIF.claim();
-	UsbEndpoint outEndpoint = usbIF.getUsbEndpoint(USB_OUT_EPNUM);
-	UsbPipe outPipe = outEndpoint.getUsbPipe();
-	outPipe.open();
-	return new UsbOutputStream(outPipe);
+protected OutputStream openOutputStream() throws IOException{
+	try{
+		if(!usbIF.isClaimed())
+			usbIF.claim();
+		UsbEndpoint outEndpoint = usbIF.getUsbEndpoint(USB_OUT_EPNUM);
+		UsbPipe outPipe = outEndpoint.getUsbPipe();
+		outPipe.open();
+		return new UsbOutputStream(outPipe);
+	} catch(UsbException e){
+		throw new IOException(e);
+	}
 }
 
 @Override
-protected InputStream openInputStream() throws UsbException{
-	if(!usbIF.isClaimed())
-		usbIF.claim();
-	UsbEndpoint inEndpoint = usbIF.getUsbEndpoint(USB_IN_EPNUM);
-	UsbPipe inPipe = inEndpoint.getUsbPipe();
-	inPipe.open();
-	return new UsbInputStream(inPipe);
+protected InputStream openInputStream() throws IOException{
+	try{
+		if(!usbIF.isClaimed())
+			usbIF.claim();
+		UsbEndpoint inEndpoint = usbIF.getUsbEndpoint(USB_IN_EPNUM);
+		UsbPipe inPipe = inEndpoint.getUsbPipe();
+		inPipe.open();
+		return new UsbInputStream(inPipe);
+	} catch(UsbException e){
+		throw new IOException(e);
+	}
 }
 
 @Override

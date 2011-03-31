@@ -4,7 +4,6 @@ import j2arduino.devices.Arduino;
 import j2arduino.devices.ArduinoKind;
 import j2arduino.util.J2ArduinoSettings;
 
-import javax.usb.UsbException;
 import java.io.IOException;
 import java.util.*;
 
@@ -105,7 +104,7 @@ synchronized public static ArduinoGateway getInstance() throws IOException{
  @param updateNow forces a search for new devices and invalidates the cache of known Arduinos.
  @return A collection containing all Arduinos found (usually without duplicates).
  @throws InterruptedException if the calling thread is interrupted before discovery has completed. */
-public Collection<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException, UsbException{
+public Collection<Arduino> getAvailableArduinos(boolean updateNow) throws IOException, InterruptedException{
 	synchronized(discoveryLock){
 		synchronized(arduinos){
 			if(!updateNow && !arduinos.isEmpty()){
