@@ -9,13 +9,9 @@ import java.io.IOException;
  */
 public class TimeoutException extends IOException{
 
-/** The cause that led to this exception. */
-private Throwable cause;
-
 /** Constructs an TimeoutException with without a message or cause. */
 public TimeoutException(){
 	super();
-	cause = null;
 }
 
 /**
@@ -24,7 +20,6 @@ public TimeoutException(){
  @param s the detail message */
 public TimeoutException(String s){
 	super(s);
-	cause = null;
 }
 
 /**
@@ -33,16 +28,6 @@ public TimeoutException(String s){
  @param s     the detail message
  @param cause the cause, that led to this */
 public TimeoutException(String s, Throwable cause){
-	super(s);
-	this.cause = cause;
-}
-
-/**
- Returns the cause of this throwable or null if the cause is nonexistent or unknown.
-
- @return the cause */
-@Override
-public Throwable getCause(){
-	return cause;
+	super(s, cause);
 }
 }
