@@ -537,12 +537,10 @@ private class ArduinoWorker implements Runnable{
 				writeByte(cmd);
 				writeByte(len);
 
-				if(len > 0){
-					for(int i = 0; i < len; i++){
-						int tmp = req.msg[i];
-						writeByte(tmp);
-						cSum ^= tmp;
-					}
+				for(int i = 0; i < len; i++){
+					int tmp = req.msg[i];
+					writeByte(tmp);
+					cSum ^= tmp;
 				}
 				writeByte(cSum);
 				out.flush();
