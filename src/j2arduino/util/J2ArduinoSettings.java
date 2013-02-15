@@ -122,6 +122,18 @@ public static String getSetting(String key, String defaultValue){
 	return defaultValue;
 }
 
+/**
+ Adds a key:value pair to the settings.
+ <p/>
+ If a setting with the given key exists, it will be overwritten.
+
+ @param key   The key.
+ @param value They value.
+ @return if there was a previous setting with the given key. */
+public static boolean addSetting(String key, String value){
+	return properties.setProperty(key, value) != null;
+}
+
 public static boolean containsSetting(String key){
 	return getSetting(key) != null;
 }
